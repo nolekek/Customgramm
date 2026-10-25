@@ -26,10 +26,17 @@
   - 1-Click Chat Summarization: Summarize the last 25 messages in any active conversation or channel.
   - Inline Message Translation: Translate foreign messages into your native tongue.
   - Smart Reply Drafting: Generate contextual reply ideas directly in the message composer.
+- **🔐 Telegram Authentication & Account Management**:
+  - **Instant QR Code Login**: Log in by scanning the displayed QR code with your mobile Telegram app (Settings &rarr; Devices &rarr; Link Desktop Device).
+  - **Interactive Account Tab**: Click the profile icon (`👤`) to inspect your active user profile (display name, username, phone number, Telegram ID, status, and safe session termination).
+  - Full phone number + SMS/Telegram code and 2FA cloud password authorization supported.
 - **🚀 Native TDLib Performance**:
   - Built on an autonomous, asynchronous Rust engine (`tg-core`) interfacing dynamically with official Telegram Database Library (`tdjson`).
   - Fast startup, tiny memory footprint compared to Electron, and full offline-first local SQLite caching.
   - Portable storage mode supported out of the box (`./.data`).
+- **📱 Android & Cross-Platform Support**:
+  - Android arm64 release APK packaging via Tauri 2.0 + Gradle.
+  - Portable distribution packages for Windows x64, Linux x64, and Android arm64.
 
 ---
 

@@ -47,16 +47,37 @@ export interface Chat {
   folder_ids?: number[];
 }
 
+export interface CodeInfo {
+  phone_number: string;
+  timeout: number;
+  code_type: string;
+  next_type?: string;
+}
+
+export interface PasswordHint {
+  hint?: string;
+  has_recovery_email: boolean;
+}
+
+export interface QrCodeInfo {
+  link: string;
+}
+
 export type AuthState =
   | 'WaitTdlibParameters'
   | 'WaitPhoneNumber'
   | 'WaitCode'
   | 'WaitOtherDeviceConfirmation'
   | 'WaitPassword'
+  | 'WaitRegistration'
   | 'Ready'
   | 'LoggingOut'
   | 'Closing'
-  | 'Closed';
+  | 'Closed'
+  | { WaitCode: CodeInfo }
+  | { WaitPassword: PasswordHint }
+  | { WaitQrCode: QrCodeInfo }
+  | Record<string, any>;
 
 export type ConnectionState =
   | 'WaitingForNetwork'
@@ -66,11 +87,15 @@ export type ConnectionState =
   | 'Ready';
 
 export interface User {
-  id: number;
+  id: number | { 0: number } | any;
   first_name: string;
   last_name: string;
   username?: string;
   phone_number?: string;
+  status?: any;
+  is_contact?: boolean;
+  is_bot?: boolean;
+  is_verified?: boolean;
 }
 
 export interface GhostSettings {

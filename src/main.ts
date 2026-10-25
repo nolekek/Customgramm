@@ -1,6 +1,7 @@
+import QRCode from 'qrcode';
 import { api } from './api';
 import { themeEngine } from './theme-engine';
-import type { Chat, Message, ThemeMeta, GhostSettings } from './types';
+import type { Chat, Message, ThemeMeta, GhostSettings, User, AuthState } from './types';
 
 class OpenCustomApp {
   private chats: Chat[] = [];
@@ -11,6 +12,9 @@ class OpenCustomApp {
   private replyingToMsg: Message | null = null;
   private ghostSettings: GhostSettings = { hide_read_receipts: true, hide_typing: true };
   private availableThemes: ThemeMeta[] = [];
+  private currentAuthState: AuthState = 'Closed';
+  private currentUser: User | null = null;
+  private currentQrLink: string = '';
 
   public async init() {
     this.bindDOMEvents();
@@ -158,7 +162,10 @@ class OpenCustomApp {
       this.renderChatList();
 
       const state = await api.getState();
-      this.handleAuthState(state.auth_state);
+      if (state.me) {
+        this.currentUser = state.me;
+      }
+      await this.handleAuthState(state.auth_state);
 
       await api.onTgEvent((event) => {
         this.processTelegramEvent(event);
@@ -168,35 +175,168 @@ class OpenCustomApp {
     }
   }
 
-  private handleAuthState(authState: string) {
-    const modal = document.getElementById('auth-modal');
-    if (!modal) return;
+  private isLoggedIn(): boolean {
+    if (this.currentUser) return true;
+    if (typeof this.currentAuthState === 'string') {
+      return this.currentAuthState === 'Ready';
+    }
+    return false;
+  }
 
-    if (authState === 'Ready') {
-      modal.classList.remove('open');
+  private getUserId(user: User | null | undefined): string | number {
+    if (!user) return '';
+    if (typeof user.id === 'object' && user.id !== null) {
+      const obj = user.id as any;
+      if (obj[0] !== undefined) return obj[0];
+      if (obj['0'] !== undefined) return obj['0'];
+      return JSON.stringify(obj);
+    }
+    return user.id;
+  }
+
+  private showStep(stepId: string) {
+    const steps = [
+      'auth-step-account',
+      'auth-step-phone',
+      'auth-step-code',
+      'auth-step-password',
+      'auth-step-qr',
+    ];
+    for (const id of steps) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.display = id === stepId ? 'flex' : 'none';
+        if (id === stepId && (id === 'auth-step-qr' || id === 'auth-step-account')) {
+          el.style.flexDirection = 'column';
+        }
+      }
+    }
+  }
+
+  private showAccountStep() {
+    const modalTitle = document.getElementById('auth-modal-title');
+    if (modalTitle) modalTitle.textContent = 'My Telegram Account';
+    this.showStep('auth-step-account');
+  }
+
+  private renderAccountInfo() {
+    const user = this.currentUser;
+    const nameEl = document.getElementById('account-name');
+    const userEl = document.getElementById('account-username');
+    const phoneEl = document.getElementById('account-phone');
+    const idEl = document.getElementById('account-id');
+    const avatarEl = document.getElementById('account-avatar');
+    const authBtn = document.getElementById('btn-auth-status');
+
+    if (!user) {
+      if (nameEl) nameEl.textContent = 'Telegram User';
+      if (userEl) userEl.textContent = '@connected';
+      if (phoneEl) phoneEl.textContent = 'Active Session';
+      if (idEl) idEl.textContent = '—';
+      if (avatarEl) avatarEl.textContent = 'TG';
+      if (authBtn) authBtn.title = 'Account (Logged In)';
       return;
     }
 
-    // Show appropriate auth step
+    const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Telegram User';
+    const username = user.username ? `@${user.username}` : 'No username set';
+    const phone = user.phone_number
+      ? (user.phone_number.startsWith('+') ? user.phone_number : `+${user.phone_number}`)
+      : 'Hidden / Private';
+    const uid = this.getUserId(user);
+    const initial = (user.first_name || user.username || 'U').charAt(0).toUpperCase();
+
+    if (nameEl) nameEl.textContent = fullName;
+    if (userEl) userEl.textContent = username;
+    if (phoneEl) phoneEl.textContent = phone;
+    if (idEl) idEl.textContent = String(uid);
+    if (avatarEl) avatarEl.textContent = initial;
+    if (authBtn) authBtn.title = `Account: ${fullName} (${username})`;
+  }
+
+  private async renderQrCode(link: string) {
+    const container = document.getElementById('qr-container');
+    if (!container) return;
+    try {
+      container.innerHTML = '';
+      const canvas = document.createElement('canvas');
+      await QRCode.toCanvas(canvas, link, {
+        width: 220,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff',
+        },
+      });
+      container.appendChild(canvas);
+      const msg = document.getElementById('qr-status-msg');
+      if (msg) msg.textContent = 'Scan code with Telegram on your phone';
+    } catch (err) {
+      console.error('Failed to generate QR code canvas:', err);
+      container.innerHTML = `<p style="color: #f7768e; font-size: 12px; padding: 12px;">Failed to generate QR code: ${err}</p>`;
+    }
+  }
+
+  private async handleAuthState(authState: any) {
+    this.currentAuthState = authState;
+    const modal = document.getElementById('auth-modal');
+    const modalTitle = document.getElementById('auth-modal-title');
+    if (!modal) return;
+
+    let stateName = '';
+    let qrLink = '';
+
+    if (typeof authState === 'string') {
+      stateName = authState;
+    } else if (typeof authState === 'object' && authState !== null) {
+      if ('WaitQrCode' in authState) {
+        stateName = 'WaitQrCode';
+        qrLink = authState.WaitQrCode.link || '';
+      } else if ('WaitCode' in authState) {
+        stateName = 'WaitCode';
+      } else if ('WaitPassword' in authState) {
+        stateName = 'WaitPassword';
+      }
+    }
+
+    if (stateName === 'Ready') {
+      this.renderAccountInfo();
+      if (modalTitle) modalTitle.textContent = 'My Telegram Account';
+      if (modal.classList.contains('open')) {
+        const stepAccount = document.getElementById('auth-step-account');
+        if (stepAccount && stepAccount.style.display !== 'flex') {
+          modal.classList.remove('open');
+        }
+      }
+      return;
+    }
+
+    // Modal is required for authentication
     modal.classList.add('open');
-    const stepPhone = document.getElementById('auth-step-phone')!;
-    const stepCode = document.getElementById('auth-step-code')!;
-    const stepPassword = document.getElementById('auth-step-password')!;
-    const stepQr = document.getElementById('auth-step-qr')!;
+    if (modalTitle) modalTitle.textContent = 'Telegram Authentication';
 
-    stepPhone.style.display = 'none';
-    stepCode.style.display = 'none';
-    stepPassword.style.display = 'none';
-    stepQr.style.display = 'none';
-
-    if (authState === 'WaitPhoneNumber') {
-      stepPhone.style.display = 'flex';
-    } else if (authState === 'WaitCode') {
-      stepCode.style.display = 'flex';
-    } else if (authState === 'WaitPassword') {
-      stepPassword.style.display = 'flex';
-    } else if (authState === 'WaitOtherDeviceConfirmation') {
-      stepQr.style.display = 'block';
+    if (stateName === 'WaitQrCode' || stateName === 'WaitOtherDeviceConfirmation') {
+      this.showStep('auth-step-qr');
+      if (qrLink) {
+        this.currentQrLink = qrLink;
+        await this.renderQrCode(qrLink);
+      }
+    } else if (stateName === 'WaitCode') {
+      this.showStep('auth-step-code');
+      const input = document.getElementById('auth-code-input') as HTMLInputElement;
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    } else if (stateName === 'WaitPassword') {
+      this.showStep('auth-step-password');
+      const input = document.getElementById('auth-password-input') as HTMLInputElement;
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    } else {
+      this.showStep('auth-step-phone');
     }
   }
 
@@ -204,6 +344,17 @@ class OpenCustomApp {
     if (typeof event === 'object' && event !== null) {
       if ('AuthStateChanged' in event) {
         this.handleAuthState(event.AuthStateChanged);
+      } else if ('MeUpdated' in event) {
+        this.currentUser = event.MeUpdated;
+        this.renderAccountInfo();
+      } else if ('UserUpdated' in event) {
+        const u = event.UserUpdated;
+        const uid = this.getUserId(u);
+        const myUid = this.getUserId(this.currentUser);
+        if (this.currentUser && uid === myUid) {
+          this.currentUser = u;
+          this.renderAccountInfo();
+        }
       } else if ('ChatListUpdated' in event) {
         api.getChats().then((chats) => {
           this.chats = chats;
@@ -634,7 +785,16 @@ class OpenCustomApp {
     });
 
     document.getElementById('btn-auth-status')?.addEventListener('click', () => {
-      document.getElementById('auth-modal')!.classList.add('open');
+      const modal = document.getElementById('auth-modal');
+      if (!modal) return;
+      modal.classList.add('open');
+
+      if (this.isLoggedIn()) {
+        this.showAccountStep();
+        this.renderAccountInfo();
+      } else {
+        this.handleAuthState(this.currentAuthState);
+      }
     });
 
     // Quick theme buttons on empty screen
@@ -727,7 +887,51 @@ Do not use <script> tags. Use CSS variables and declarative data-action attribut
       if (pwd) await api.sendPassword(pwd);
     });
     document.getElementById('btn-request-qr')?.addEventListener('click', async () => {
-      await api.requestQrCode();
+      this.showStep('auth-step-qr');
+      const container = document.getElementById('qr-container');
+      if (container) {
+        container.innerHTML = `<div style="color: #333; font-size: 12px;">Requesting QR code...</div>`;
+      }
+      try {
+        await api.requestQrCode();
+      } catch (err) {
+        console.error('Request QR error:', err);
+      }
+    });
+
+    document.getElementById('btn-copy-qr-link')?.addEventListener('click', async () => {
+      if (this.currentQrLink) {
+        await navigator.clipboard.writeText(this.currentQrLink);
+        alert('QR code login link copied to clipboard!');
+      } else {
+        alert('No active QR code link available.');
+      }
+    });
+
+    document.getElementById('btn-qr-back-to-phone')?.addEventListener('click', () => {
+      this.showStep('auth-step-phone');
+    });
+
+    document.getElementById('btn-code-back-to-phone')?.addEventListener('click', () => {
+      this.showStep('auth-step-phone');
+    });
+
+    document.getElementById('btn-account-logout')?.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to log out of Telegram?')) {
+        try {
+          await api.logOut();
+          this.currentUser = null;
+          this.chats = [];
+          this.activeChatId = null;
+          this.activeChatMessages = [];
+          this.renderChatList();
+          document.getElementById('empty-chat-placeholder')!.style.display = 'flex';
+          document.getElementById('active-chat-container')!.style.display = 'none';
+          this.handleAuthState('WaitPhoneNumber');
+        } catch (err: any) {
+          alert(`Logout failed: ${err}`);
+        }
+      }
     });
 
     // Drag and Drop Theme ZIP

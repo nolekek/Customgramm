@@ -520,14 +520,51 @@
     </div>
   </div>
 
-  <!-- Auth Modal -->
+  <!-- Auth & Account Modal -->
   <div id="auth-modal" class="modal-backdrop">
-    <div class="modal-dialog" style="max-width: 420px;">
+    <div class="modal-dialog" style="max-width: 440px;">
       <div class="modal-header">
-        <h3 class="modal-title">Telegram Authentication</h3>
+        <h3 id="auth-modal-title" class="modal-title">Telegram Authentication</h3>
         <button class="icon-btn btn-close-modal">✕</button>
       </div>
       <div class="modal-body">
+        <!-- Account Step (When Logged In) -->
+        <div id="auth-step-account" class="form-group" style="display: none; align-items: center; text-align: center; gap: 14px;">
+          <div id="account-avatar" style="width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, #7aa2f7, #bb9af7); color: #1a1b26; font-size: 30px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(122,162,247,0.35);">
+            U
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div id="account-name" style="font-size: 18px; font-weight: 700; color: #ffffff;">Telegram User</div>
+            <div id="account-username" style="font-size: 13px; color: #7aa2f7;">@username</div>
+          </div>
+
+          <div style="width: 100%; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; text-align: left; margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="opacity: 0.6;">Phone Number</span>
+              <span id="account-phone" style="font-weight: 600;">—</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="opacity: 0.6;">Telegram ID</span>
+              <span id="account-id" style="font-family: monospace; font-size: 12px; opacity: 0.85;">—</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="opacity: 0.6;">Status</span>
+              <span id="account-status" style="color: #9ece6a; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #9ece6a; box-shadow: 0 0 6px #9ece6a;"></span>
+                Online
+              </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="opacity: 0.6;">Connection</span>
+              <span id="account-connection" style="opacity: 0.85;">Ready (TDLib Core)</span>
+            </div>
+          </div>
+
+          <button id="btn-account-logout" class="btn-modal" style="background: rgba(247, 118, 142, 0.15); color: #f7768e; border: 1px solid rgba(247, 118, 142, 0.35); width: 100%; margin-top: 6px; padding: 10px;">
+            🚪 Log Out of Telegram
+          </button>
+        </div>
+
         <!-- Phone Step -->
         <div id="auth-step-phone" class="form-group">
           <label class="form-label">Phone Number (International format)</label>
@@ -541,6 +578,7 @@
           <label class="form-label">Verification Code</label>
           <input id="auth-code-input" type="text" class="form-input" placeholder="12345">
           <button id="btn-submit-code" class="btn-modal btn-primary" style="margin-top: 8px;">Verify Code</button>
+          <button id="btn-code-back-to-phone" class="btn-modal btn-secondary" style="margin-top: 4px;">Change Phone Number</button>
         </div>
 
         <!-- Password Step -->
@@ -551,13 +589,23 @@
         </div>
 
         <!-- QR Code Step -->
-        <div id="auth-step-qr" class="form-group" style="display: none; text-align: center;">
-          <p style="font-size: 13px; margin-bottom: 12px;">Scan with your Telegram Mobile App</p>
-          <div id="qr-container" style="background: white; padding: 16px; border-radius: 8px; display: inline-block;"></div>
+        <div id="auth-step-qr" class="form-group" style="display: none; text-align: center; align-items: center;">
+          <h4 style="font-size: 15px; margin-bottom: 4px; color: #ffffff;">Log in by QR Code</h4>
+          <p style="font-size: 12px; opacity: 0.7; margin-bottom: 12px; line-height: 1.4;">
+            Open Telegram on your mobile device &rarr; Settings &rarr; Devices &rarr; <strong>Link Desktop Device</strong>
+          </p>
+          <div id="qr-container" style="background: white; padding: 12px; border-radius: 12px; display: inline-flex; justify-content: center; align-items: center; min-width: 220px; min-height: 220px; box-shadow: 0 4px 20px rgba(0,0,0,0.35);">
+            <div style="color: #333; font-size: 12px;">Generating QR code...</div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 12px; width: 100%;">
+            <button id="btn-copy-qr-link" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">📋 Copy Link</button>
+            <button id="btn-qr-back-to-phone" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">📱 Use Phone Number</button>
+          </div>
+          <span id="qr-status-msg" style="font-size: 11px; opacity: 0.5; margin-top: 6px;">QR code updates automatically</span>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn-modal btn-secondary btn-close-modal">Cancel</button>
+        <button class="btn-modal btn-secondary btn-close-modal">Close</button>
       </div>
     </div>
   </div>
