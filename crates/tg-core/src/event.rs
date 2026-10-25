@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use crate::domain::{AuthState, Chat, ChatFolder, ChatId, ChatPosition, FileInfo, Message, MessageId, MessageStatus, User};
+use crate::domain::{
+    AuthState, Chat, ChatFolder, ChatId, ChatPosition, FileInfo, Message, MessageContent,
+    MessageId, MessageStatus, User, UserId, UserStatus,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ConnectionState {
@@ -18,8 +21,22 @@ pub enum CoreEvent {
     ChatUpdated(Box<Chat>),
     MessageReceived(Box<Message>),
     MessageUpdated(Box<Message>),
+    MessageSendSucceeded {
+        chat_id: ChatId,
+        old_message_id: MessageId,
+        message: Box<Message>,
+    },
+    MessageContentChanged {
+        chat_id: ChatId,
+        message_id: MessageId,
+        content: MessageContent,
+    },
     UserUpdated(Box<User>),
     MeUpdated(Box<User>),
+    UserStatusChanged {
+        user_id: UserId,
+        status: UserStatus,
+    },
     LogMessage(String),
     ErrorOccurred(String),
 

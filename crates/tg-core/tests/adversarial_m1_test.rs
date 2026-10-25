@@ -287,15 +287,15 @@ async fn test_router_abort_all_concurrency() {
             while running_c.load(Ordering::Relaxed) && count < 1000 {
                 let (_id, rx) = router_c.register();
                 tokio::task::yield_now().await;
-                let _ = rx.await;
+                let _ = tokio::time::timeout(Duration::from_millis(100), rx).await;
                 count += 1;
             }
         }));
     }
 
     tokio::time::sleep(Duration::from_millis(5)).await;
-    router.abort_all("Simulated connection termination");
     running.store(false, Ordering::Relaxed);
+    router.abort_all("Simulated connection termination");
 
     for h in reg_handles {
         let _ = h.await;

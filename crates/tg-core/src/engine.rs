@@ -112,6 +112,8 @@ impl Engine {
                 CoreCommand::SendCode(code) => self.backend.send_code(&code).await,
                 CoreCommand::SendPassword(pwd) => self.backend.send_password(&pwd).await,
                 CoreCommand::RequestQrCode => self.backend.request_qr_code().await,
+                CoreCommand::OpenChat(chat_id) => self.backend.open_chat(chat_id).await,
+                CoreCommand::CloseChat(chat_id) => self.backend.close_chat(chat_id).await,
                 CoreCommand::SendTextMessage {
                     chat_id,
                     text,

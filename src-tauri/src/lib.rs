@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager, State};
 use zip::ZipArchive;
 
-use tg_core::domain::{Chat, ChatId, Message, MessageId};
+use tg_core::domain::{Chat, ChatId, Message, MessageId, User, UserId};
 use tg_core::handle::CoreHandle;
 use tg_core::state::CoreState;
 use tg_core::{Config, Engine};
@@ -125,6 +125,30 @@ fn get_chats(state: State<'_, AppState>) -> Vec<Chat> {
 fn get_messages(chat_id: i64, state: State<'_, AppState>) -> Vec<Message> {
     let s = state.handle.read_state();
     s.messages.get(&ChatId(chat_id)).cloned().unwrap_or_default()
+}
+
+#[tauri::command]
+fn get_user(user_id: i64, state: State<'_, AppState>) -> Option<User> {
+    let s = state.handle.read_state();
+    s.get_user(UserId(user_id)).cloned()
+}
+
+#[tauri::command]
+async fn open_chat(chat_id: i64, state: State<'_, AppState>) -> Result<(), String> {
+    state
+        .handle
+        .open_chat(ChatId(chat_id))
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn close_chat(chat_id: i64, state: State<'_, AppState>) -> Result<(), String> {
+    state
+        .handle
+        .close_chat(ChatId(chat_id))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -572,6 +596,9 @@ pub fn run() {
             get_state,
             get_chats,
             get_messages,
+            get_user,
+            open_chat,
+            close_chat,
             load_history,
             send_message,
             edit_message,

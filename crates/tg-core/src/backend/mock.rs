@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
 use parking_lot::Mutex;
@@ -15,6 +15,7 @@ pub struct MockBackend {
     messages: Arc<Mutex<HashMap<ChatId, Vec<Message>>>>,
     files: Arc<Mutex<HashMap<i32, FileInfo>>>,
     download_tasks: Arc<Mutex<HashMap<i32, tokio::sync::oneshot::Sender<()>>>>,
+    opened_chats: Arc<Mutex<HashSet<ChatId>>>,
 }
 
 impl Default for MockBackend {
@@ -32,7 +33,12 @@ impl MockBackend {
             messages: Arc::new(Mutex::new(HashMap::new())),
             files: Arc::new(Mutex::new(HashMap::new())),
             download_tasks: Arc::new(Mutex::new(HashMap::new())),
+            opened_chats: Arc::new(Mutex::new(HashSet::new())),
         }
+    }
+
+    pub fn is_chat_open(&self, chat_id: ChatId) -> bool {
+        self.opened_chats.lock().contains(&chat_id)
     }
 
     pub fn get_file(&self, file_id: i32) -> Option<FileInfo> {
@@ -281,6 +287,16 @@ impl TelegramBackend for MockBackend {
         self.emit(CoreEvent::AuthStateChanged(AuthState::WaitQrCode(QrCodeInfo {
             link: "tg://login?token=MOCK_QR_TOKEN_DEMO".to_string(),
         })));
+        Box::pin(async move { Ok(()) })
+    }
+
+    fn open_chat(&self, chat_id: ChatId) -> BoxFuture<'_, ()> {
+        self.opened_chats.lock().insert(chat_id);
+        Box::pin(async move { Ok(()) })
+    }
+
+    fn close_chat(&self, chat_id: ChatId) -> BoxFuture<'_, ()> {
+        self.opened_chats.lock().remove(&chat_id);
         Box::pin(async move { Ok(()) })
     }
 

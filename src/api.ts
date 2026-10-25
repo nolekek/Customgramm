@@ -8,6 +8,8 @@ import type {
   ThemeBundle,
   AiRequestPayload,
   ProxyConfig,
+  User,
+  CoreEvent,
 } from './types';
 
 export const api = {
@@ -32,11 +34,20 @@ export const api = {
   async getState(): Promise<any> {
     return invoke('get_state');
   },
+  async getUser(userId: number): Promise<User | null> {
+    return invoke('get_user', { userId });
+  },
   async getChats(): Promise<Chat[]> {
     return invoke('get_chats');
   },
   async getMessages(chatId: number): Promise<Message[]> {
     return invoke('get_messages', { chatId });
+  },
+  async openChat(chatId: number): Promise<void> {
+    return invoke('open_chat', { chatId });
+  },
+  async closeChat(chatId: number): Promise<void> {
+    return invoke('close_chat', { chatId });
   },
   async loadHistory(chatId: number, fromMsgId?: number, limit = 50): Promise<Message[]> {
     return invoke('load_history', { chatId, fromMsgId, limit });
@@ -93,7 +104,7 @@ export const api = {
   },
 
   // Events
-  onTgEvent(callback: (event: any) => void): Promise<UnlistenFn> {
-    return listen('tg://event', (e) => callback(e.payload));
+  onTgEvent(callback: (event: CoreEvent) => void): Promise<UnlistenFn> {
+    return listen<CoreEvent>('tg://event', (e) => callback(e.payload));
   },
 };

@@ -487,6 +487,32 @@
     .chat-header-status {
       font-size: 11.5px;
       color: var(--tg-text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .online-indicator,
+    .online-dot,
+    .presence-dot.online {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #2ecc71;
+      box-shadow: 0 0 6px rgba(46, 204, 113, 0.7);
+      flex-shrink: 0;
+    }
+
+    .status-channel,
+    .status-group,
+    .status-self,
+    .status-bot,
+    .status-recently,
+    .status-last-week,
+    .status-last-month,
+    .status-offline {
+      color: var(--tg-text-muted);
     }
 
     .chat-header-actions {

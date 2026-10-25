@@ -193,6 +193,21 @@ body::before {
   font-size: 11px;
   color: var(--tg-accent);
   letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.online-indicator,
+.online-dot,
+.presence-dot.online {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #00ffcc;
+  box-shadow: 0 0 8px #00ffcc;
+  flex-shrink: 0;
 }
 
 .chat-header-actions {

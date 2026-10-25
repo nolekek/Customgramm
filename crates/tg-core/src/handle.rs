@@ -12,6 +12,8 @@ pub enum CoreCommand {
     SendCode(String),
     SendPassword(String),
     RequestQrCode,
+    OpenChat(ChatId),
+    CloseChat(ChatId),
     SendTextMessage {
         chat_id: ChatId,
         text: String,
@@ -79,6 +81,14 @@ impl CoreHandle {
 
     pub async fn request_qr_code(&self) -> Result<()> {
         self.send(CoreCommand::RequestQrCode).await
+    }
+
+    pub async fn open_chat(&self, chat_id: ChatId) -> Result<()> {
+        self.send(CoreCommand::OpenChat(chat_id)).await
+    }
+
+    pub async fn close_chat(&self, chat_id: ChatId) -> Result<()> {
+        self.send(CoreCommand::CloseChat(chat_id)).await
     }
 
     pub async fn send_text_message(

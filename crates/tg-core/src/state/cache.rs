@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::domain::{
     AuthState, Chat, ChatFolder, ChatId, ChatPosition, ChatType, FileInfo, Message, MessageContent, MessageId,
-    MessageStatus, User, UserId,
+    MessageStatus, Sender, User, UserId, UserStatus,
 };
 use crate::event::{ConnectionState, CoreEvent};
 
@@ -59,12 +59,26 @@ impl CoreState {
             if user.photo_path.is_none() && existing.photo_path.is_some() {
                 user.photo_path = existing.photo_path.clone();
             }
+            if user.status == UserStatus::Unknown && existing.status != UserStatus::Unknown {
+                user.status = existing.status.clone();
+            }
         }
         let is_me = self.me.as_ref().map(|m| m.id == user.id).unwrap_or(false);
         if is_me {
             self.me = Some(user.clone());
         }
         self.users.insert(user.id, user);
+    }
+
+    pub fn update_user_status(&mut self, user_id: UserId, status: UserStatus) {
+        if let Some(user) = self.users.get_mut(&user_id) {
+            user.status = status.clone();
+        }
+        if let Some(ref mut me) = self.me {
+            if me.id == user_id {
+                me.status = status;
+            }
+        }
     }
 
     pub fn insert_or_update_chat(&mut self, mut chat: Chat) {
@@ -74,6 +88,31 @@ impl CoreState {
             }
             if chat.photo_path.is_none() && existing.photo_path.is_some() {
                 chat.photo_path = existing.photo_path.clone();
+            }
+            // Preserve valid last_message if incoming chat has None or date: 0
+            if chat.last_message.is_none() && existing.last_message.is_some() {
+                chat.last_message = existing.last_message.clone();
+            } else if let (Some(ref mut new_last), Some(ref old_last)) =
+                (&mut chat.last_message, &existing.last_message)
+            {
+                if new_last.id == old_last.id {
+                    if new_last.date == 0 && old_last.date != 0 {
+                        new_last.date = old_last.date;
+                    }
+                    if new_last.sender == Sender::Unknown && old_last.sender != Sender::Unknown {
+                        new_last.sender = old_last.sender.clone();
+                    }
+                } else if new_last.date == 0 && old_last.date != 0 {
+                    chat.last_message = existing.last_message.clone();
+                }
+            }
+        }
+        if let Some(ref last_msg) = chat.last_message {
+            if last_msg.date != 0 {
+                let msgs = self.messages.entry(chat.id).or_default();
+                if msgs.is_empty() {
+                    msgs.push(last_msg.clone());
+                }
             }
         }
         self.chats.insert(chat.id, chat);
@@ -194,19 +233,61 @@ impl CoreState {
         mut message: Message,
     ) {
         message.status = MessageStatus::Sent;
-        if let Some(msgs) = self.messages.get_mut(&chat_id) {
-            if let Some(pos) = msgs.iter().position(|m| m.id == old_message_id) {
-                msgs[pos] = message.clone();
-            } else if !msgs.iter().any(|m| m.id == message.id) {
-                msgs.push(message.clone());
-                msgs.sort_by_key(|m| (m.date, m.id.0));
+
+        // Defensively inherit non-zero date and known sender if incoming message has dummy metadata
+        if message.date == 0 || message.sender == Sender::Unknown {
+            let existing_meta = self
+                .messages
+                .get(&chat_id)
+                .and_then(|msgs| {
+                    msgs.iter()
+                        .find(|m| m.id == old_message_id || m.id == message.id)
+                        .map(|m| (m.date, m.sender.clone()))
+                })
+                .or_else(|| {
+                    self.chats
+                        .get(&chat_id)
+                        .and_then(|c| c.last_message.as_ref())
+                        .filter(|m| m.id == old_message_id || m.id == message.id)
+                        .map(|m| (m.date, m.sender.clone()))
+                });
+
+            if let Some((existing_date, existing_sender)) = existing_meta {
+                if message.date == 0 && existing_date != 0 {
+                    message.date = existing_date;
+                }
+                if message.sender == Sender::Unknown && existing_sender != Sender::Unknown {
+                    message.sender = existing_sender;
+                }
             }
         }
+
+        if let Some(msgs) = self.messages.get_mut(&chat_id) {
+            msgs.retain(|m| m.id != old_message_id && m.id != message.id);
+            msgs.push(message.clone());
+            msgs.sort_by_key(|m| (m.date, m.id.0));
+        }
+
         if let Some(chat) = self.chats.get_mut(&chat_id) {
-            if let Some(ref last_msg) = chat.last_message {
-                if last_msg.id == old_message_id || last_msg.id == message.id {
-                    chat.last_message = Some(message);
+            let should_update = match &chat.last_message {
+                Some(last) => {
+                    last.id == old_message_id
+                        || last.id == message.id
+                        || (message.date != 0 && message.date >= last.date)
                 }
+                None => true,
+            };
+            if should_update {
+                let mut final_msg = message;
+                if let Some(ref last) = chat.last_message {
+                    if final_msg.date == 0 && last.date != 0 {
+                        final_msg.date = last.date;
+                    }
+                    if final_msg.sender == Sender::Unknown && last.sender != Sender::Unknown {
+                        final_msg.sender = last.sender.clone();
+                    }
+                }
+                chat.last_message = Some(final_msg);
             }
         }
     }
@@ -245,24 +326,74 @@ impl CoreState {
         }
     }
 
-    pub fn add_message(&mut self, message: Message) {
+    pub fn add_message(&mut self, mut message: Message) {
         let chat_id = message.chat_id;
         let msgs = self.messages.entry(chat_id).or_default();
 
+        // 1. Defensively recover existing date and sender if incoming message has dummy metadata
+        if message.date == 0 || message.sender == Sender::Unknown {
+            let existing_meta = msgs
+                .iter()
+                .find(|m| m.id == message.id)
+                .map(|m| (m.date, m.sender.clone()))
+                .or_else(|| {
+                    self.chats
+                        .get(&chat_id)
+                        .and_then(|c| c.last_message.as_ref())
+                        .filter(|m| m.id == message.id)
+                        .map(|m| (m.date, m.sender.clone()))
+                });
+
+            if let Some((existing_date, existing_sender)) = existing_meta {
+                if message.date == 0 && existing_date != 0 {
+                    message.date = existing_date;
+                }
+                if message.sender == Sender::Unknown && existing_sender != Sender::Unknown {
+                    message.sender = existing_sender;
+                }
+            }
+        }
+
+        // 2. Update messages vector (never push date 0 messages into history)
         if let Some(pos) = msgs.iter().position(|m| m.id == message.id) {
             msgs[pos] = message.clone();
-        } else {
+            msgs.sort_by_key(|m| (m.date, m.id.0));
+        } else if message.date != 0 {
             msgs.push(message.clone());
             msgs.sort_by_key(|m| (m.date, m.id.0));
         }
 
+        // 3. Update chat.last_message safely
         if let Some(chat) = self.chats.get_mut(&chat_id) {
             let should_update = match &chat.last_message {
-                Some(last) => message.date >= last.date || message.id == last.id,
-                None => true,
+                Some(last) => {
+                    if last.id == message.id {
+                        true
+                    } else if message.date == 0 {
+                        false
+                    } else {
+                        message.date >= last.date
+                    }
+                }
+                None => message.date != 0,
             };
+
             if should_update {
-                chat.last_message = Some(message);
+                if message.date == 0 {
+                    // Content-only mutation fallback
+                    if let Some(ref mut last) = chat.last_message {
+                        if last.id == message.id {
+                            last.content = message.content;
+                        }
+                    }
+                } else {
+                    if let Some(ref last) = chat.last_message {
+                        if message.sender == Sender::Unknown && last.sender != Sender::Unknown {
+                            message.sender = last.sender.clone();
+                        }
+                    }
+                    chat.last_message = Some(message);
+                }
             }
         }
     }
@@ -331,6 +462,9 @@ impl CoreState {
             CoreEvent::ConnectionStateChanged(conn) => self.update_connection_state(conn.clone()),
             CoreEvent::MeUpdated(user) => self.set_me(*user.clone()),
             CoreEvent::UserUpdated(user) => self.update_user(*user.clone()),
+            CoreEvent::UserStatusChanged { user_id, status } => {
+                self.update_user_status(*user_id, status.clone());
+            }
             CoreEvent::ChatUpdated(chat) => self.insert_or_update_chat(*chat.clone()),
             CoreEvent::ChatListUpdated(_) => self.rebuild_chat_order(),
             CoreEvent::ChatPositionChanged { chat_id, position } => {
@@ -352,6 +486,20 @@ impl CoreState {
             CoreEvent::MessageReceived(msg) | CoreEvent::MessageUpdated(msg) => {
                 self.add_message(*msg.clone())
             }
+            CoreEvent::MessageSendSucceeded {
+                chat_id,
+                old_message_id,
+                message,
+            } => {
+                self.update_message_send_succeeded(*chat_id, *old_message_id, *message.clone());
+            }
+            CoreEvent::MessageContentChanged {
+                chat_id,
+                message_id,
+                content,
+            } => {
+                self.update_message_content(*chat_id, *message_id, content.clone());
+            }
             CoreEvent::MessagesDeleted {
                 chat_id,
                 message_ids,
@@ -372,6 +520,292 @@ impl CoreState {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::{Sender, UserId, UserStatus};
+
+    fn make_test_user(id: i64, name: &str, status: UserStatus) -> User {
+        User {
+            id: UserId(id),
+            first_name: name.to_string(),
+            last_name: "".to_string(),
+            username: Some(format!("user_{}", id)),
+            phone_number: None,
+            status,
+            is_contact: true,
+            is_bot: false,
+            is_verified: false,
+            photo_file_id: None,
+            photo_path: None,
+        }
+    }
+
+    #[test]
+    fn test_user_status_initial_and_update() {
+        let mut state = CoreState::new();
+        let user = make_test_user(1001, "Alice", UserStatus::Offline { was_online: 1729880000 });
+        state.update_user(user);
+
+        assert_eq!(
+            state.get_user(UserId(1001)).unwrap().status,
+            UserStatus::Offline { was_online: 1729880000 }
+        );
+
+        // Apply UserStatusChanged event
+        state.apply_update(&CoreEvent::UserStatusChanged {
+            user_id: UserId(1001),
+            status: UserStatus::Online,
+        });
+
+        assert_eq!(state.get_user(UserId(1001)).unwrap().status, UserStatus::Online);
+    }
+
+    #[test]
+    fn test_user_status_me_synchronization() {
+        let mut state = CoreState::new();
+        let me = make_test_user(42, "Current User", UserStatus::Online);
+        state.set_me(me);
+
+        assert_eq!(state.me.as_ref().unwrap().status, UserStatus::Online);
+        assert_eq!(state.get_user(UserId(42)).unwrap().status, UserStatus::Online);
+
+        // Transition me to Offline
+        state.apply_update(&CoreEvent::UserStatusChanged {
+            user_id: UserId(42),
+            status: UserStatus::Offline { was_online: 1729885000 },
+        });
+
+        assert_eq!(
+            state.me.as_ref().unwrap().status,
+            UserStatus::Offline { was_online: 1729885000 }
+        );
+        assert_eq!(
+            state.get_user(UserId(42)).unwrap().status,
+            UserStatus::Offline { was_online: 1729885000 }
+        );
+    }
+
+    #[test]
+    fn test_user_status_presence_transitions() {
+        let mut state = CoreState::new();
+        let user = make_test_user(2002, "Bob", UserStatus::Unknown);
+        state.update_user(user);
+
+        let transitions = vec![
+            UserStatus::Online,
+            UserStatus::Offline { was_online: 1729881234 },
+            UserStatus::Recently,
+            UserStatus::LastWeek,
+            UserStatus::LastMonth,
+            UserStatus::Online,
+        ];
+
+        for next_status in transitions {
+            state.update_user_status(UserId(2002), next_status.clone());
+            assert_eq!(state.get_user(UserId(2002)).unwrap().status, next_status);
+        }
+    }
+
+    #[test]
+    fn test_user_status_preserve_on_unknown_user_update() {
+        let mut state = CoreState::new();
+        let user = make_test_user(3003, "Charlie", UserStatus::Online);
+        state.update_user(user);
+
+        // Incoming updateUser with Unknown status should preserve known Online status
+        let user_update_unknown = make_test_user(3003, "Charlie Updated", UserStatus::Unknown);
+        state.update_user(user_update_unknown);
+
+        assert_eq!(state.get_user(UserId(3003)).unwrap().status, UserStatus::Online);
+        assert_eq!(state.get_user(UserId(3003)).unwrap().first_name, "Charlie Updated");
+
+        // Incoming updateUser with a known status should update it
+        let user_update_recently = make_test_user(3003, "Charlie Updated", UserStatus::Recently);
+        state.update_user(user_update_recently);
+        assert_eq!(state.get_user(UserId(3003)).unwrap().status, UserStatus::Recently);
+    }
+
+    #[test]
+    fn test_user_status_nonexistent_user_graceful() {
+        let mut state = CoreState::new();
+        // Should not panic on nonexistent user ID
+        state.update_user_status(UserId(99999), UserStatus::Online);
+        assert!(state.get_user(UserId(99999)).is_none());
+    }
+
+    #[test]
+    fn test_user_status_event_serde_roundtrip() {
+        let event = CoreEvent::UserStatusChanged {
+            user_id: UserId(5555),
+            status: UserStatus::Offline { was_online: 1729889999 },
+        };
+
+        let json = serde_json::to_string(&event).expect("serialize");
+        let deserialized: CoreEvent = serde_json::from_str(&json).expect("deserialize");
+
+        match deserialized {
+            CoreEvent::UserStatusChanged { user_id, status } => {
+                assert_eq!(user_id, UserId(5555));
+                assert_eq!(status, UserStatus::Offline { was_online: 1729889999 });
+            }
+            _ => panic!("Expected UserStatusChanged variant"),
+        }
+    }
+
+    fn make_test_message(id: i64, chat_id: i64, date: i64, text: &str) -> Message {
+        Message {
+            id: MessageId(id),
+            chat_id: ChatId(chat_id),
+            sender: Sender::User(UserId(1001)),
+            date,
+            content: MessageContent::Text {
+                text: text.to_string(),
+                entities: Vec::new(),
+            },
+            is_outgoing: true,
+            status: MessageStatus::Sent,
+            reply_to_message_id: None,
+            can_be_edited: true,
+            can_be_deleted: true,
+        }
+    }
+
+    #[test]
+    fn test_seed_last_message_on_empty_cache() {
+        let mut state = CoreState::new();
+        let msg = make_test_message(10, 100, 1729880000, "Initial last message");
+        let chat = Chat {
+            id: ChatId(100),
+            title: "Test Group".to_string(),
+            chat_type: ChatType::Supergroup,
+            unread_count: 0,
+            last_read_inbox_message_id: 0,
+            last_read_outbox_message_id: 0,
+            last_message: Some(msg.clone()),
+            position: None,
+            is_muted: false,
+            has_unread_mention: false,
+            folder_ids: Vec::new(),
+            photo_file_id: None,
+            photo_path: None,
+        };
+
+        // Cache was empty for chat 100, so inserting chat must seed last_message
+        state.insert_or_update_chat(chat);
+        let cached = state.get_messages(ChatId(100)).expect("messages seeded");
+        assert_eq!(cached.len(), 1);
+        assert_eq!(cached[0].id, MessageId(10));
+        assert_eq!(cached[0].content, msg.content);
+    }
+
+    #[test]
+    fn test_strictly_chronological_message_ordering() {
+        let mut state = CoreState::new();
+        let msg1 = make_test_message(101, 200, 1000, "First");
+        let msg2 = make_test_message(102, 200, 2000, "Second");
+        let msg3 = make_test_message(103, 200, 3000, "Third");
+        let msg4 = make_test_message(104, 200, 2000, "Second concurrent");
+
+        // Insert out of order
+        state.add_message(msg3);
+        state.add_message(msg1);
+        state.add_message(msg4);
+        state.add_message(msg2);
+
+        let msgs = state.get_messages(ChatId(200)).unwrap();
+        let order: Vec<(i64, i64)> = msgs.iter().map(|m| (m.date, m.id.0)).collect();
+        assert_eq!(order, vec![(1000, 101), (2000, 102), (2000, 104), (3000, 103)]);
+    }
+
+    #[test]
+    fn test_message_send_succeeded_deduplication() {
+        let mut state = CoreState::new();
+        let temp_msg = make_test_message(-100, 300, 5000, "Optimistic send");
+        state.add_message(temp_msg);
+        assert_eq!(state.get_messages(ChatId(300)).unwrap().len(), 1);
+
+        let confirmed_msg = make_test_message(777, 300, 5000, "Optimistic send");
+        state.apply_update(&CoreEvent::MessageSendSucceeded {
+            chat_id: ChatId(300),
+            old_message_id: MessageId(-100),
+            message: Box::new(confirmed_msg),
+        });
+
+        let msgs = state.get_messages(ChatId(300)).unwrap();
+        assert_eq!(msgs.len(), 1, "Temporary message must be replaced, not duplicated");
+        assert_eq!(msgs[0].id, MessageId(777));
+        assert_eq!(msgs[0].status, MessageStatus::Sent);
+    }
+
+    #[test]
+    fn test_non_destructive_content_update_preserves_date_and_sender() {
+        let mut state = CoreState::new();
+        let original_msg = Message {
+            id: MessageId(501),
+            chat_id: ChatId(400),
+            sender: Sender::User(UserId(9999)),
+            date: 1729881234,
+            content: MessageContent::Text {
+                text: "Original text".to_string(),
+                entities: Vec::new(),
+            },
+            is_outgoing: false,
+            status: MessageStatus::Read,
+            reply_to_message_id: None,
+            can_be_edited: true,
+            can_be_deleted: true,
+        };
+        state.add_message(original_msg.clone());
+
+        // Update via MessageContentChanged
+        let updated_content = MessageContent::Text {
+            text: "Updated non-destructively".to_string(),
+            entities: Vec::new(),
+        };
+        state.apply_update(&CoreEvent::MessageContentChanged {
+            chat_id: ChatId(400),
+            message_id: MessageId(501),
+            content: updated_content.clone(),
+        });
+
+        let cached = &state.get_messages(ChatId(400)).unwrap()[0];
+        assert_eq!(cached.content, updated_content);
+        assert_eq!(cached.date, 1729881234, "Date must remain intact");
+        assert_eq!(cached.sender, Sender::User(UserId(9999)), "Sender must remain intact");
+        assert_eq!(cached.status, MessageStatus::Read, "Status must remain intact");
+
+        // Also test dummy date 0 via MessageUpdated does not wipe out original date/sender
+        let dummy_updated_msg = Message {
+            id: MessageId(501),
+            chat_id: ChatId(400),
+            sender: Sender::Unknown,
+            date: 0,
+            content: MessageContent::Text {
+                text: "Edited second time".to_string(),
+                entities: Vec::new(),
+            },
+            is_outgoing: false,
+            status: MessageStatus::Read,
+            reply_to_message_id: None,
+            can_be_edited: false,
+            can_be_deleted: false,
+        };
+        state.apply_update(&CoreEvent::MessageUpdated(Box::new(dummy_updated_msg)));
+
+        let cached2 = &state.get_messages(ChatId(400)).unwrap()[0];
+        assert_eq!(cached2.date, 1729881234, "Date must not be overwritten by epoch 0");
+        assert_eq!(cached2.sender, Sender::User(UserId(9999)), "Sender must not be overwritten by Unknown");
+        assert_eq!(
+            cached2.content,
+            MessageContent::Text {
+                text: "Edited second time".to_string(),
+                entities: Vec::new(),
+            }
+        );
     }
 }
 

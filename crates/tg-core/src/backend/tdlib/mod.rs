@@ -66,6 +66,29 @@ impl TDLibInner {
         self.send_json(req)
     }
 
+    pub fn parse_user_status(&self, status_obj: &Value) -> Option<UserStatus> {
+        let st = status_obj.get("@type").and_then(|t| t.as_str())?;
+        match st {
+            "userStatusOnline" => Some(UserStatus::Online),
+            "userStatusOffline" => {
+                let was_online = status_obj
+                    .get("was_online")
+                    .and_then(|w| match w {
+                        Value::Number(n) => n.as_i64(),
+                        Value::String(s) => s.parse::<i64>().ok(),
+                        _ => None,
+                    })
+                    .unwrap_or(0);
+                Some(UserStatus::Offline { was_online })
+            }
+            "userStatusRecently" => Some(UserStatus::Recently),
+            "userStatusLastWeek" => Some(UserStatus::LastWeek),
+            "userStatusLastMonth" => Some(UserStatus::LastMonth),
+            "userStatusEmpty" => Some(UserStatus::Unknown),
+            _ => Some(UserStatus::Unknown),
+        }
+    }
+
     fn parse_user(&self, v: &Value) -> Option<User> {
         let id = UserId(v.get("id")?.as_i64()?);
         let first_name = v.get("first_name").and_then(|s| s.as_str()).unwrap_or("").to_string();
@@ -78,21 +101,10 @@ impl TDLibInner {
             .map(|s| s.to_string());
         let phone_number = v.get("phone_number").and_then(|s| s.as_str()).map(|s| s.to_string());
 
-        let status = if let Some(st) = v.get("status").and_then(|s| s.get("@type")).and_then(|t| t.as_str()) {
-            match st {
-                "userStatusOnline" => UserStatus::Online,
-                "userStatusOffline" => {
-                    let was_online = v.get("status").and_then(|s| s.get("was_online")).and_then(|w| w.as_i64()).unwrap_or(0);
-                    UserStatus::Offline { was_online }
-                }
-                "userStatusRecently" => UserStatus::Recently,
-                "userStatusLastWeek" => UserStatus::LastWeek,
-                "userStatusLastMonth" => UserStatus::LastMonth,
-                _ => UserStatus::Unknown,
-            }
-        } else {
-            UserStatus::Unknown
-        };
+        let status = v
+            .get("status")
+            .and_then(|s| self.parse_user_status(s))
+            .unwrap_or(UserStatus::Unknown);
 
         let is_contact = v.get("is_contact").and_then(|b| b.as_bool()).unwrap_or(false);
         let is_bot = v.get("type").and_then(|t| t.get("@type")).and_then(|s| s.as_str()).map(|s| s.contains("Bot")).unwrap_or(false);
@@ -268,9 +280,15 @@ impl TDLibInner {
                     if let Some(user) = self.parse_user(user_obj) {
                         let is_me = update.get("@extra").and_then(|e| e.as_str()) == Some("get_me_request");
                         if is_me {
-                            let _ = event_tx.send(CoreEvent::MeUpdated(Box::new(user)));
+                            let _ = event_tx.send(CoreEvent::MeUpdated(Box::new(user.clone())));
                         } else {
-                            let _ = event_tx.send(CoreEvent::UserUpdated(Box::new(user)));
+                            let _ = event_tx.send(CoreEvent::UserUpdated(Box::new(user.clone())));
+                        }
+                        if user.status != UserStatus::Unknown {
+                            let _ = event_tx.send(CoreEvent::UserStatusChanged {
+                                user_id: user.id,
+                                status: user.status.clone(),
+                            });
                         }
                     }
                 }
@@ -279,9 +297,30 @@ impl TDLibInner {
                 if let Some(user) = self.parse_user(&update) {
                     let is_me = update.get("@extra").and_then(|e| e.as_str()) == Some("get_me_request");
                     if is_me {
-                        let _ = event_tx.send(CoreEvent::MeUpdated(Box::new(user)));
+                        let _ = event_tx.send(CoreEvent::MeUpdated(Box::new(user.clone())));
                     } else {
-                        let _ = event_tx.send(CoreEvent::UserUpdated(Box::new(user)));
+                        let _ = event_tx.send(CoreEvent::UserUpdated(Box::new(user.clone())));
+                    }
+                    if user.status != UserStatus::Unknown {
+                        let _ = event_tx.send(CoreEvent::UserStatusChanged {
+                            user_id: user.id,
+                            status: user.status.clone(),
+                        });
+                    }
+                }
+            }
+            "updateUserStatus" => {
+                let uid_opt = update.get("user_id").and_then(|u| match u {
+                    Value::Number(n) => n.as_i64(),
+                    Value::String(s) => s.parse::<i64>().ok(),
+                    _ => None,
+                });
+                if let (Some(uid), Some(status_obj)) = (uid_opt, update.get("status")) {
+                    if let Some(status) = self.parse_user_status(status_obj) {
+                        let _ = event_tx.send(CoreEvent::UserStatusChanged {
+                            user_id: UserId(uid),
+                            status,
+                        });
                     }
                 }
             }
@@ -491,13 +530,18 @@ impl TDLibInner {
                     update.get("message").and_then(|m| m.get("chat_id")).and_then(|c| c.as_i64()),
                     update.get("message"),
                 ) {
+                    let old_id = update.get("old_message_id").and_then(|o| o.as_i64()).unwrap_or(0);
                     if let Some(msg) = self.parse_message(msg_obj) {
                         let _ = event_tx.send(CoreEvent::MessageStatusChanged {
                             chat_id: ChatId(chat_id),
                             message_id: msg.id,
                             status: MessageStatus::Sent,
                         });
-                        let _ = event_tx.send(CoreEvent::MessageReceived(Box::new(msg)));
+                        let _ = event_tx.send(CoreEvent::MessageSendSucceeded {
+                            chat_id: ChatId(chat_id),
+                            old_message_id: MessageId(old_id),
+                            message: Box::new(msg),
+                        });
                     }
                 }
             }
@@ -525,19 +569,11 @@ impl TDLibInner {
                             raw_type: "unknown".to_string(),
                         }
                     };
-                    let msg = Message {
-                        id: MessageId(msg_id),
+                    let _ = event_tx.send(CoreEvent::MessageContentChanged {
                         chat_id: ChatId(chat_id),
-                        sender: Sender::Unknown,
-                        date: 0,
+                        message_id: MessageId(msg_id),
                         content,
-                        is_outgoing: false,
-                        status: MessageStatus::Read,
-                        reply_to_message_id: None,
-                        can_be_edited: false,
-                        can_be_deleted: false,
-                    };
-                    let _ = event_tx.send(CoreEvent::MessageUpdated(Box::new(msg)));
+                    });
                 }
             }
             "updateDeleteMessages" => {
@@ -604,7 +640,15 @@ impl TDLibInner {
             .and_then(|s| s.as_str())
             .unwrap_or("")
         {
-            "chatTypePrivate" => ChatType::Private,
+            "chatTypePrivate" => {
+                if let Some(uid) = v.get("type").and_then(|t| t.get("user_id")).and_then(|u| u.as_i64()) {
+                    let _ = self.send_json(json!({
+                        "@type": "getUser",
+                        "user_id": uid
+                    }));
+                }
+                ChatType::Private
+            }
             "chatTypeSecret" => ChatType::Secret,
             "chatTypeBasicGroup" => ChatType::BasicGroup,
             "chatTypeSupergroup" => {
@@ -1169,6 +1213,24 @@ impl TelegramBackend for TDLibBackend {
         });
         let inner = self.inner.clone();
         Box::pin(async move { inner.send_json(req) })
+    }
+
+    fn open_chat(&self, chat_id: ChatId) -> BoxFuture<'_, ()> {
+        let req = json!({
+            "@type": "openChat",
+            "chat_id": chat_id.0
+        });
+        let inner = self.inner.clone();
+        Box::pin(async move { inner.send_request(req).await.map(|_| ()) })
+    }
+
+    fn close_chat(&self, chat_id: ChatId) -> BoxFuture<'_, ()> {
+        let req = json!({
+            "@type": "closeChat",
+            "chat_id": chat_id.0
+        });
+        let inner = self.inner.clone();
+        Box::pin(async move { inner.send_request(req).await.map(|_| ()) })
     }
 
     fn send_text_message(&self, chat_id: ChatId, text: &str, reply_to: Option<MessageId>) -> BoxFuture<'_, ()> {

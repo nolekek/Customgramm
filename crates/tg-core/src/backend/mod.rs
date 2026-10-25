@@ -19,6 +19,8 @@ pub trait TelegramBackend: Send + Sync {
     fn send_code(&self, code: &str) -> BoxFuture<'_, ()>;
     fn send_password(&self, password: &str) -> BoxFuture<'_, ()>;
     fn request_qr_code(&self) -> BoxFuture<'_, ()>;
+    fn open_chat(&self, chat_id: ChatId) -> BoxFuture<'_, ()>;
+    fn close_chat(&self, chat_id: ChatId) -> BoxFuture<'_, ()>;
     fn send_text_message(&self, chat_id: ChatId, text: &str, reply_to: Option<MessageId>) -> BoxFuture<'_, ()>;
     fn edit_message_text(&self, chat_id: ChatId, message_id: MessageId, text: &str) -> BoxFuture<'_, ()>;
     fn delete_messages(&self, chat_id: ChatId, message_ids: Vec<MessageId>, revoke: bool) -> BoxFuture<'_, ()>;

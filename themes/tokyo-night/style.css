@@ -162,6 +162,21 @@ body {
 .chat-header-status {
   font-size: 12px;
   color: var(--tg-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.online-indicator,
+.online-dot,
+.presence-dot.online {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #9ece6a;
+  box-shadow: 0 0 6px rgba(158, 206, 106, 0.7);
+  flex-shrink: 0;
 }
 
 .chat-header-actions {

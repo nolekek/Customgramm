@@ -95,19 +95,52 @@ export type ConnectionState =
   | 'Updating'
   | 'Ready';
 
+export type UserStatus =
+  | 'Online'
+  | { Offline: { was_online: number } }
+  | { was_online: number }
+  | 'Recently'
+  | 'LastWeek'
+  | 'LastMonth'
+  | 'Unknown'
+  | Record<string, any>;
+
 export interface User {
   id: number | { 0: number } | any;
   first_name: string;
   last_name: string;
   username?: string;
   phone_number?: string;
-  status?: any;
+  status?: UserStatus;
   is_contact?: boolean;
   is_bot?: boolean;
   is_verified?: boolean;
   photo_file_id?: number;
   photo_path?: string;
 }
+
+export type CoreEvent =
+  | { AuthStateChanged: AuthState }
+  | { ConnectionStateChanged: ConnectionState }
+  | { ChatListUpdated: number[] }
+  | { ChatUpdated: Chat }
+  | { MessageReceived: Message }
+  | { MessageUpdated: Message }
+  | { MessageSendSucceeded: { chat_id: number; old_message_id: number; message: Message } }
+  | { MessageContentChanged: { chat_id: number; message_id: number; content: MessageContent } }
+  | { UserUpdated: User }
+  | { MeUpdated: User }
+  | { UserStatusChanged: { user_id: number | { 0: number } | any; status: UserStatus } }
+  | { ChatPositionChanged: { chat_id: number; position?: ChatPosition } }
+  | { ChatReadInboxChanged: { chat_id: number; last_read_inbox_message_id: number; unread_count: number } }
+  | { ChatReadOutboxChanged: { chat_id: number; last_read_outbox_message_id: number } }
+  | { MessagesDeleted: { chat_id: number; message_ids: number[] } }
+  | { MessageStatusChanged: { chat_id: number; message_id: number; status: string } }
+  | { FileUpdated: any }
+  | { ChatFoldersUpdated: ChatFolder[] }
+  | { ChatFolderPositionsChanged: { chat_id: number; folder_ids: number[] } }
+  | { HistoryLoaded: { chat_id: number; count: number } }
+  | Record<string, any>;
 
 export interface GhostSettings {
   hide_read_receipts: boolean;

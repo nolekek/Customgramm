@@ -185,8 +185,41 @@ class OpenCustomApp {
   private currentConnectionState: string = 'Ready';
   private avatarManager = new AvatarManager();
 
+  // User presence & profile cache
+  private users: Map<number, User> = new Map();
+  private userStatuses: Map<number, any> = new Map();
+  private presenceTicker: number | null = null;
+
   // Context menu state
   private contextMenuMsgId: number | null = null;
+
+  // History loading and upward pagination state
+  private isLoadingHistory: boolean = false;
+  private isPaginating: boolean = false;
+  private hasReachedHistoryEnd: boolean = false;
+  private scrollAnchorHeight: number = 0;
+  private scrollAnchorTop: number = 0;
+
+  private sortActiveMessages() {
+    this.activeChatMessages.sort((a, b) => {
+      if (a.date !== b.date) {
+        return a.date - b.date;
+      }
+      return a.id - b.id;
+    });
+  }
+
+  private mergeMessages(newMsgs: Message[]) {
+    for (const msg of newMsgs) {
+      const idx = this.activeChatMessages.findIndex((m) => m.id === msg.id);
+      if (idx >= 0) {
+        this.activeChatMessages[idx] = msg;
+      } else {
+        this.activeChatMessages.push(msg);
+      }
+    }
+    this.sortActiveMessages();
+  }
 
   public async init() {
     this.injectStaticIcons();
@@ -194,6 +227,21 @@ class OpenCustomApp {
     await this.initThemes();
     await this.initGhostMode();
     await this.initTelegramSync();
+    this.startPresenceTicker();
+  }
+
+  private startPresenceTicker() {
+    if (this.presenceTicker !== null) {
+      window.clearInterval(this.presenceTicker);
+    }
+    this.presenceTicker = window.setInterval(() => {
+      if (this.activeChatId !== null) {
+        const chat = this.chats.find((c) => c.id === this.activeChatId);
+        if (chat && chat.chat_type === 'Private') {
+          this.renderHeader();
+        }
+      }
+    }, 30000);
   }
 
   // -------------------------------------------------------------------------
@@ -373,6 +421,25 @@ class OpenCustomApp {
       }
       if (state.me) {
         this.currentUser = state.me;
+        const myUid = Number(this.getUserId(state.me));
+        if (!isNaN(myUid)) {
+          this.users.set(myUid, state.me);
+          if (state.me.status) {
+            this.userStatuses.set(myUid, state.me.status);
+          }
+        }
+      }
+      if (state.users) {
+        for (const [k, u] of Object.entries(state.users)) {
+          const userObj = u as User;
+          const uid = Number(this.getUserId(userObj)) || Number(k);
+          if (!isNaN(uid)) {
+            this.users.set(uid, userObj);
+            if (userObj.status) {
+              this.userStatuses.set(uid, userObj.status);
+            }
+          }
+        }
       }
       if (state.chat_folders) {
         this.chatFolders = state.chat_folders;
@@ -416,14 +483,52 @@ class OpenCustomApp {
       this.renderAccountInfo();
     } else if ('MeUpdated' in event) {
       this.currentUser = event.MeUpdated;
+      const myUid = Number(this.getUserId(this.currentUser));
+      if (!isNaN(myUid)) {
+        this.users.set(myUid, event.MeUpdated);
+        if (event.MeUpdated.status) {
+          this.userStatuses.set(myUid, event.MeUpdated.status);
+        }
+      }
       this.renderAccountInfo();
+      if (this.activeChatId === myUid) {
+        this.renderHeader();
+      }
     } else if ('UserUpdated' in event) {
-      const u = event.UserUpdated;
-      const uid = this.getUserId(u);
-      const myUid = this.getUserId(this.currentUser);
+      const u: User = event.UserUpdated;
+      const uid = Number(this.getUserId(u));
+      if (!isNaN(uid)) {
+        this.users.set(uid, u);
+        if (u.status) {
+          this.userStatuses.set(uid, u.status);
+        }
+      }
+      const myUid = Number(this.getUserId(this.currentUser));
       if (this.currentUser && uid === myUid) {
         this.currentUser = u;
         this.renderAccountInfo();
+      }
+      if (this.activeChatId === uid) {
+        this.renderHeader();
+      }
+    } else if ('UserStatusChanged' in event) {
+      const { user_id, status } = event.UserStatusChanged;
+      const rawUid = typeof user_id === 'object' ? (user_id[0] ?? user_id['0'] ?? user_id) : user_id;
+      const uid = Number(rawUid);
+      if (!isNaN(uid)) {
+        this.userStatuses.set(uid, status);
+        const user = this.users.get(uid);
+        if (user) {
+          user.status = status;
+        }
+        const myUid = Number(this.getUserId(this.currentUser));
+        if (this.currentUser && uid === myUid) {
+          this.currentUser.status = status;
+          this.renderAccountInfo();
+        }
+        if (this.activeChatId === uid) {
+          this.renderHeader();
+        }
       }
     } else if ('ChatListUpdated' in event) {
       api.getChats().then((chats) => {
@@ -453,32 +558,83 @@ class OpenCustomApp {
       const rawId = typeof chat_id === 'object' ? chat_id[0] ?? chat_id : chat_id;
       if (this.activeChatId === rawId) {
         api.getMessages(rawId).then((msgs) => {
-          this.activeChatMessages = msgs;
-          this.renderMessages();
-          this.scrollToBottom();
+          const container = document.getElementById('messages-container');
+          if (this.isPaginating && container) {
+            if (msgs.length <= this.activeChatMessages.length) {
+              this.hasReachedHistoryEnd = true;
+            }
+            this.mergeMessages(msgs);
+            this.renderMessages();
+            container.scrollTop =
+              this.scrollAnchorTop + (container.scrollHeight - this.scrollAnchorHeight);
+            this.isPaginating = false;
+            this.isLoadingHistory = false;
+          } else {
+            this.mergeMessages(msgs);
+            this.renderMessages();
+            this.scrollToBottom();
+            this.isLoadingHistory = false;
+          }
         });
       }
     } else if ('MessageReceived' in event) {
       const msg: Message = event.MessageReceived;
       if (this.activeChatId === msg.chat_id) {
-        // If we had an optimistic message with same text or negative ID, replace it
-        const optIdx = this.activeChatMessages.findIndex(
-          (m) => m.id < 0 && extractMessageText(m.content) === extractMessageText(msg.content)
-        );
-        if (optIdx >= 0) {
-          this.activeChatMessages[optIdx] = msg;
+        // Deduplicate messages by ID
+        const existingIdx = this.activeChatMessages.findIndex((m) => m.id === msg.id);
+        if (existingIdx >= 0) {
+          this.activeChatMessages[existingIdx] = msg;
         } else {
-          this.activeChatMessages.push(msg);
+          // If we had an optimistic message with same text or negative ID, replace it
+          const optIdx = this.activeChatMessages.findIndex(
+            (m) => m.id < 0 && extractMessageText(m.content) === extractMessageText(msg.content)
+          );
+          if (optIdx >= 0) {
+            this.activeChatMessages[optIdx] = msg;
+          } else {
+            this.activeChatMessages.push(msg);
+          }
         }
+        this.sortActiveMessages();
         this.renderMessages();
         this.scrollToBottom();
+      }
+    } else if ('MessageSendSucceeded' in event) {
+      const { chat_id, old_message_id, message } = event.MessageSendSucceeded;
+      const rawCid = typeof chat_id === 'object' ? chat_id[0] ?? chat_id : chat_id;
+      const rawOldMid =
+        typeof old_message_id === 'object' ? old_message_id[0] ?? old_message_id : old_message_id;
+      if (this.activeChatId === rawCid) {
+        this.activeChatMessages = this.activeChatMessages.filter(
+          (m) => m.id !== rawOldMid && m.id !== message.id
+        );
+        this.activeChatMessages.push(message);
+        this.sortActiveMessages();
+        this.renderMessages();
+      }
+    } else if ('MessageContentChanged' in event) {
+      const { chat_id, message_id, content } = event.MessageContentChanged;
+      const rawCid = typeof chat_id === 'object' ? chat_id[0] ?? chat_id : chat_id;
+      const rawMid =
+        typeof message_id === 'object' ? message_id[0] ?? message_id : message_id;
+      if (this.activeChatId === rawCid) {
+        const found = this.activeChatMessages.find((m) => m.id === rawMid);
+        if (found) {
+          found.content = content;
+          this.renderMessages();
+        }
       }
     } else if ('MessageUpdated' in event) {
       const msg: Message = event.MessageUpdated;
       if (this.activeChatId === msg.chat_id) {
         const idx = this.activeChatMessages.findIndex((m) => m.id === msg.id);
         if (idx >= 0) {
-          this.activeChatMessages[idx] = msg;
+          if (msg.date === 0) {
+            this.activeChatMessages[idx].content = msg.content;
+          } else {
+            this.activeChatMessages[idx] = msg;
+          }
+          this.sortActiveMessages();
           this.renderMessages();
         }
       }
@@ -660,30 +816,60 @@ class OpenCustomApp {
   // 7. Chat Selection & Active Chat
   // -------------------------------------------------------------------------
   private async selectChat(chatId: number) {
+    const prevChatId = this.activeChatId;
+    if (prevChatId !== null && prevChatId !== chatId) {
+      api.closeChat(prevChatId).catch((err) => console.warn('closeChat failed:', err));
+    }
+
     this.activeChatId = chatId;
     this.replyingToMsg = null;
     this.editingMsg = null;
+    this.hasReachedHistoryEnd = false;
+    this.isLoadingHistory = false;
+    this.isPaginating = false;
 
     document.getElementById('empty-chat-placeholder')!.style.display = 'none';
     document.getElementById('active-chat-container')!.style.display = 'flex';
 
     this.renderChatList();
-    this.renderActiveChat();
 
-    // Load in-memory history first
+    // Invoke openChat on backend to activate history streaming and member caching in TDLib
+    api.openChat(chatId).catch((err) => console.warn('openChat failed:', err));
+
+    const chat = this.chats.find((c) => c.id === chatId);
+    if (chat && chat.chat_type === 'Private') {
+      api.getUser(chatId).then((user) => {
+        if (user) {
+          const uid = Number(this.getUserId(user)) || chatId;
+          this.users.set(uid, user);
+          if (user.status) {
+            this.userStatuses.set(uid, user.status);
+          }
+          if (this.activeChatId === chatId) {
+            this.renderHeader();
+          }
+        }
+      }).catch(() => {});
+    }
+
+    // Load in-memory history first - channels, groups, and private chats show cached history or seeded last_message immediately
     try {
       this.activeChatMessages = await api.getMessages(chatId);
-      this.renderMessages();
+      this.sortActiveMessages();
+      this.renderActiveChat();
       this.scrollToBottom();
 
       // Trigger TDLib native history retrieval
+      this.isLoadingHistory = true;
       const loaded = await api.loadHistory(chatId, undefined, 50);
+      this.isLoadingHistory = false;
       if (loaded && loaded.length > 0 && this.activeChatId === chatId) {
-        this.activeChatMessages = loaded;
+        this.mergeMessages(loaded);
         this.renderMessages();
         this.scrollToBottom();
       }
     } catch (err) {
+      this.isLoadingHistory = false;
       console.error('Failed to load chat history:', err);
     }
   }
@@ -695,6 +881,101 @@ class OpenCustomApp {
     this.renderInput();
   }
 
+  private formatLastSeen(wasOnline: number): string {
+    if (!wasOnline || wasOnline <= 0) return 'offline';
+    const nowSec = Math.floor(Date.now() / 1000);
+    const diff = Math.max(0, nowSec - wasOnline);
+
+    if (diff < 60) {
+      return 'last seen just now';
+    }
+    if (diff < 3600) {
+      const mins = Math.floor(diff / 60);
+      return `last seen ${mins} ${mins === 1 ? 'minute' : 'minutes'} ago`;
+    }
+
+    const date = new Date(wasOnline * 1000);
+    const now = new Date();
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const isToday =
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+    if (isToday) {
+      return `last seen today at ${timeStr}`;
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
+    if (isYesterday) {
+      return `last seen yesterday at ${timeStr}`;
+    }
+
+    const sameYear = date.getFullYear() === now.getFullYear();
+    const dateStr = date.toLocaleDateString([], {
+      day: 'numeric',
+      month: 'short',
+      ...(sameYear ? {} : { year: 'numeric' }),
+    });
+    return `last seen ${dateStr} at ${timeStr}`;
+  }
+
+  private formatPresence(chat: Chat): string {
+    if (chat.chat_type === 'Channel') {
+      return '<span class="status-channel">Channel</span>';
+    }
+    if (chat.chat_type === 'Supergroup' || chat.chat_type === 'BasicGroup') {
+      return '<span class="status-group">Group conversation</span>';
+    }
+
+    const myUid = Number(this.getUserId(this.currentUser));
+    if (myUid && (chat.id === myUid || chat.id === Number(this.currentUser?.id))) {
+      return '<span class="status-self">chat with yourself</span>';
+    }
+
+    const user = this.users.get(chat.id);
+    if (user?.is_bot) {
+      return '<span class="status-bot">bot</span>';
+    }
+
+    const status = this.userStatuses.get(chat.id) || user?.status;
+    if (!status) {
+      return '<span class="status-offline">offline</span>';
+    }
+
+    if (status === 'Online' || (typeof status === 'object' && status.type === 'Online')) {
+      return '<span class="online-indicator"></span> Online';
+    }
+    if (status === 'Recently' || (typeof status === 'object' && status.type === 'Recently')) {
+      return '<span class="status-recently">last seen recently</span>';
+    }
+    if (status === 'LastWeek' || (typeof status === 'object' && status.type === 'LastWeek')) {
+      return '<span class="status-last-week">last seen within a week</span>';
+    }
+    if (status === 'LastMonth' || (typeof status === 'object' && status.type === 'LastMonth')) {
+      return '<span class="status-last-month">last seen within a month</span>';
+    }
+
+    let wasOnline: number | undefined;
+    if (typeof status === 'object') {
+      if (status.Offline && typeof status.Offline.was_online === 'number') {
+        wasOnline = status.Offline.was_online;
+      } else if (typeof status.was_online === 'number') {
+        wasOnline = status.was_online;
+      }
+    }
+    if (wasOnline && wasOnline > 0) {
+      return `<span class="status-offline">${this.escapeHtml(this.formatLastSeen(wasOnline))}</span>`;
+    }
+
+    return '<span class="status-offline">offline</span>';
+  }
+
   private renderHeader() {
     const headerEl = document.getElementById('chat-header-container');
     if (!headerEl || this.activeChatId === null) return;
@@ -703,17 +984,11 @@ class OpenCustomApp {
     if (!chat) return;
 
     const avatarData = this.avatarManager.getAvatarData(chat);
-
-    let statusText = 'Online';
-    if (chat.chat_type === 'Channel') {
-      statusText = 'Channel';
-    } else if (chat.chat_type === 'Supergroup' || chat.chat_type === 'BasicGroup') {
-      statusText = 'Group conversation';
-    }
+    const presenceHtml = this.formatPresence(chat);
 
     const tokens: Record<string, string> = {
       title: this.escapeHtml(chat.title),
-      status: statusText,
+      status: presenceHtml,
       avatar_letter: avatarData.initials,
       avatar_content: avatarData.innerHtml,
       avatar_style: `background: ${avatarData.gradient};`,
@@ -1383,6 +1658,47 @@ class OpenCustomApp {
     searchInput?.addEventListener('input', (e) => {
       this.searchQuery = (e.target as HTMLInputElement).value;
       this.renderChatList();
+    });
+
+    // Upward scroll pagination on messages container
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer?.addEventListener('scroll', async () => {
+      if (
+        messagesContainer.scrollTop < 60 &&
+        !this.isLoadingHistory &&
+        !this.hasReachedHistoryEnd &&
+        this.activeChatId !== null &&
+        this.activeChatMessages.length > 0
+      ) {
+        const oldestMsg = this.activeChatMessages.find((m) => m.id > 0);
+        if (!oldestMsg) return;
+
+        this.isLoadingHistory = true;
+        this.isPaginating = true;
+        this.scrollAnchorHeight = messagesContainer.scrollHeight;
+        this.scrollAnchorTop = messagesContainer.scrollTop;
+
+        try {
+          const older = await api.loadHistory(this.activeChatId, oldestMsg.id, 50);
+          if (!older || older.length === 0) {
+            this.hasReachedHistoryEnd = true;
+          } else {
+            const prevLen = this.activeChatMessages.length;
+            this.mergeMessages(older);
+            if (this.activeChatMessages.length === prevLen) {
+              this.hasReachedHistoryEnd = true;
+            }
+            this.renderMessages();
+            messagesContainer.scrollTop =
+              this.scrollAnchorTop + (messagesContainer.scrollHeight - this.scrollAnchorHeight);
+          }
+        } catch (err) {
+          console.error('Failed to load older messages:', err);
+        } finally {
+          this.isPaginating = false;
+          this.isLoadingHistory = false;
+        }
+      }
     });
 
     // Top Header Buttons
