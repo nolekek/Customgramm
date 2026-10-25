@@ -15,6 +15,7 @@ class OpenCustomApp {
   private currentAuthState: AuthState = 'Closed';
   private currentUser: User | null = null;
   private currentQrLink: string = '';
+  private currentConnectionState: string = 'Ready';
 
   public async init() {
     this.bindDOMEvents();
@@ -162,6 +163,9 @@ class OpenCustomApp {
       this.renderChatList();
 
       const state = await api.getState();
+      if (state.connection_state) {
+        this.currentConnectionState = state.connection_state;
+      }
       if (state.me) {
         this.currentUser = state.me;
       }
@@ -176,7 +180,6 @@ class OpenCustomApp {
   }
 
   private isLoggedIn(): boolean {
-    if (this.currentUser) return true;
     if (typeof this.currentAuthState === 'string') {
       return this.currentAuthState === 'Ready';
     }
@@ -213,10 +216,21 @@ class OpenCustomApp {
     }
   }
 
-  private showAccountStep() {
+  private async showAccountStep() {
     const modalTitle = document.getElementById('auth-modal-title');
     if (modalTitle) modalTitle.textContent = 'My Telegram Account';
     this.showStep('auth-step-account');
+    if (!this.currentUser) {
+      try {
+        const state = await api.getState();
+        if (state.me) {
+          this.currentUser = state.me;
+        }
+      } catch (err) {
+        console.warn('Failed to query me in showAccountStep:', err);
+      }
+    }
+    this.renderAccountInfo();
   }
 
   private renderAccountInfo() {
@@ -227,6 +241,44 @@ class OpenCustomApp {
     const idEl = document.getElementById('account-id');
     const avatarEl = document.getElementById('account-avatar');
     const authBtn = document.getElementById('btn-auth-status');
+    const statusEl = document.getElementById('account-status');
+    const connEl = document.getElementById('account-connection');
+
+    // Update connection & status badges
+    if (statusEl && connEl) {
+      const conn = this.currentConnectionState;
+      let statusColor = '#9ece6a';
+      let statusText = 'Online';
+      let connText = 'Ready (TDLib Core)';
+
+      if (conn === 'WaitingForNetwork') {
+        statusColor = '#f7768e';
+        statusText = 'Waiting for network';
+        connText = 'No Network Connection';
+      } else if (conn === 'Connecting' || conn === 'ConnectingToProxy') {
+        statusColor = '#e0af68';
+        statusText = conn === 'ConnectingToProxy' ? 'Connecting to proxy...' : 'Connecting...';
+        connText = conn === 'ConnectingToProxy' ? 'Proxy Handshake' : 'Connecting to Telegram...';
+      } else if (conn === 'Updating') {
+        statusColor = '#7dcfff';
+        statusText = 'Updating...';
+        connText = 'Synchronizing State';
+      }
+
+      statusEl.style.color = statusColor;
+      statusEl.innerHTML = `<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${statusColor}; box-shadow: 0 0 6px ${statusColor};"></span> ${statusText}`;
+      connEl.textContent = connText;
+    }
+
+    if (!this.isLoggedIn()) {
+      if (nameEl) nameEl.textContent = 'Not Logged In';
+      if (userEl) userEl.textContent = '@none';
+      if (phoneEl) phoneEl.textContent = '—';
+      if (idEl) idEl.textContent = '—';
+      if (avatarEl) avatarEl.textContent = '?';
+      if (authBtn) authBtn.title = 'Account / Log In';
+      return;
+    }
 
     if (!user) {
       if (nameEl) nameEl.textContent = 'Telegram User';
@@ -256,7 +308,16 @@ class OpenCustomApp {
 
   private async renderQrCode(link: string) {
     const container = document.getElementById('qr-container');
+    const msg = document.getElementById('qr-status-msg');
     if (!container) return;
+
+    if (!link || !link.trim()) {
+      container.innerHTML = `<div style="color: #333; font-size: 12px; padding: 16px;">Waiting for QR link from Telegram...</div>`;
+      if (msg) msg.textContent = 'Connecting to Telegram authorization server...';
+      return;
+    }
+
+    this.currentQrLink = link;
     try {
       container.innerHTML = '';
       const canvas = document.createElement('canvas');
@@ -269,11 +330,11 @@ class OpenCustomApp {
         },
       });
       container.appendChild(canvas);
-      const msg = document.getElementById('qr-status-msg');
       if (msg) msg.textContent = 'Scan code with Telegram on your phone';
     } catch (err) {
       console.error('Failed to generate QR code canvas:', err);
       container.innerHTML = `<p style="color: #f7768e; font-size: 12px; padding: 12px;">Failed to generate QR code: ${err}</p>`;
+      if (msg) msg.textContent = 'Error rendering QR code. Click Refresh to retry.';
     }
   }
 
@@ -311,15 +372,21 @@ class OpenCustomApp {
       return;
     }
 
+    // Reset user profile if not in Ready state
+    this.currentUser = null;
+    this.renderAccountInfo();
+
     // Modal is required for authentication
     modal.classList.add('open');
     if (modalTitle) modalTitle.textContent = 'Telegram Authentication';
 
     if (stateName === 'WaitQrCode' || stateName === 'WaitOtherDeviceConfirmation') {
       this.showStep('auth-step-qr');
-      if (qrLink) {
-        this.currentQrLink = qrLink;
-        await this.renderQrCode(qrLink);
+      const targetLink = qrLink || this.currentQrLink;
+      if (targetLink) {
+        await this.renderQrCode(targetLink);
+      } else {
+        await this.renderQrCode('');
       }
     } else if (stateName === 'WaitCode') {
       this.showStep('auth-step-code');
@@ -344,6 +411,9 @@ class OpenCustomApp {
     if (typeof event === 'object' && event !== null) {
       if ('AuthStateChanged' in event) {
         this.handleAuthState(event.AuthStateChanged);
+      } else if ('ConnectionStateChanged' in event) {
+        this.currentConnectionState = event.ConnectionStateChanged;
+        this.renderAccountInfo();
       } else if ('MeUpdated' in event) {
         this.currentUser = event.MeUpdated;
         this.renderAccountInfo();
@@ -784,16 +854,15 @@ class OpenCustomApp {
       this.openGhostModal();
     });
 
-    document.getElementById('btn-auth-status')?.addEventListener('click', () => {
+    document.getElementById('btn-auth-status')?.addEventListener('click', async () => {
       const modal = document.getElementById('auth-modal');
       if (!modal) return;
       modal.classList.add('open');
 
       if (this.isLoggedIn()) {
-        this.showAccountStep();
-        this.renderAccountInfo();
+        await this.showAccountStep();
       } else {
-        this.handleAuthState(this.currentAuthState);
+        await this.handleAuthState(this.currentAuthState);
       }
     });
 
@@ -886,18 +955,27 @@ Do not use <script> tags. Use CSS variables and declarative data-action attribut
       const pwd = (document.getElementById('auth-password-input') as HTMLInputElement).value;
       if (pwd) await api.sendPassword(pwd);
     });
-    document.getElementById('btn-request-qr')?.addEventListener('click', async () => {
+    const requestQr = async () => {
       this.showStep('auth-step-qr');
       const container = document.getElementById('qr-container');
+      const msg = document.getElementById('qr-status-msg');
       if (container) {
-        container.innerHTML = `<div style="color: #333; font-size: 12px;">Requesting QR code...</div>`;
+        container.innerHTML = `<div style="color: #333; font-size: 12px; padding: 16px;">Requesting QR code...</div>`;
       }
+      if (msg) msg.textContent = 'Contacting Telegram authorization service...';
       try {
         await api.requestQrCode();
-      } catch (err) {
+      } catch (err: any) {
         console.error('Request QR error:', err);
+        if (container) {
+          container.innerHTML = `<p style="color: #f7768e; font-size: 12px; padding: 12px;">Failed to request QR code: ${err}</p>`;
+        }
+        if (msg) msg.textContent = 'Click "Refresh QR" to try again or use Phone Number.';
       }
-    });
+    };
+
+    document.getElementById('btn-request-qr')?.addEventListener('click', requestQr);
+    document.getElementById('btn-refresh-qr')?.addEventListener('click', requestQr);
 
     document.getElementById('btn-copy-qr-link')?.addEventListener('click', async () => {
       if (this.currentQrLink) {

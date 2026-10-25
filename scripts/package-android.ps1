@@ -27,6 +27,10 @@ if (Test-Path $AndroidHome) {
         $env:CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER = "$ndkBin\aarch64-linux-android34-clang.cmd"
     }
 }
+$AndroidCliDir = "C:\Users\Admin\.android\bin"
+if (Test-Path $AndroidCliDir) {
+    $env:Path = "$AndroidCliDir;$env:Path"
+}
 
 # 1. Build frontend (Vite)
 Write-Host "[1/4] Building web frontend (Vite)..." -ForegroundColor Yellow
@@ -72,3 +76,11 @@ cmd /c "$ApkSigner verify -v $SignedApk"
 
 $SizeMb = [math]::Round((Get-Item $SignedApk).Length / 1MB, 2)
 Write-Host "SUCCESS! Android arm64 release APK created at $SignedApk ($SizeMb MB)" -ForegroundColor Green
+
+# 5. Verify Android project metadata via android-cli
+Write-Host "[5/5] Verifying project metadata via android-cli..." -ForegroundColor Yellow
+$AndroidCliExe = "$AndroidCliDir\android-cli.exe"
+if (Test-Path $AndroidCliExe) {
+    & $AndroidCliExe describe --project_dir="$RootDir\src-tauri\gen\android"
+}
+
