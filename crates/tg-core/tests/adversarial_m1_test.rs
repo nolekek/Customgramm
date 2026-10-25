@@ -323,6 +323,8 @@ fn make_chat(id: i64, order: u64, is_pinned: bool) -> Chat {
         is_muted: false,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     }
 }
 

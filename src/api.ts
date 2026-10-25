@@ -7,6 +7,7 @@ import type {
   ThemeMeta,
   ThemeBundle,
   AiRequestPayload,
+  ProxyConfig,
 } from './types';
 
 export const api = {
@@ -37,7 +38,7 @@ export const api = {
   async getMessages(chatId: number): Promise<Message[]> {
     return invoke('get_messages', { chatId });
   },
-  async loadHistory(chatId: number, fromMsgId?: number, limit = 30): Promise<void> {
+  async loadHistory(chatId: number, fromMsgId?: number, limit = 50): Promise<Message[]> {
     return invoke('load_history', { chatId, fromMsgId, limit });
   },
   async sendMessage(chatId: number, text: string, replyTo?: number): Promise<void> {
@@ -48,6 +49,20 @@ export const api = {
   },
   async deleteMessages(chatId: number, messageIds: number[], revoke = true): Promise<void> {
     return invoke('delete_messages', { chatId, messageIds, revoke });
+  },
+
+  // Files & Cache
+  async getFileBase64(path: string): Promise<string> {
+    return invoke('get_file_base64', { path });
+  },
+  async getCacheSize(): Promise<number> {
+    return invoke('get_cache_size');
+  },
+  async clearCache(): Promise<void> {
+    return invoke('clear_cache');
+  },
+  async setProxy(proxy?: ProxyConfig | null): Promise<void> {
+    return invoke('set_proxy', { proxy: proxy || null });
   },
 
   // Ghost Mode

@@ -133,12 +133,13 @@ async fn load_history(
     from_msg_id: Option<i64>,
     limit: i32,
     state: State<'_, AppState>,
-) -> Result<(), String> {
-    state
+) -> Result<Vec<Message>, String> {
+    let _ = state
         .handle
         .load_history(ChatId(chat_id), from_msg_id.map(MessageId), limit)
-        .await
-        .map_err(|e| e.to_string())
+        .await;
+    let s = state.handle.read_state();
+    Ok(s.messages.get(&ChatId(chat_id)).cloned().unwrap_or_default())
 }
 
 #[tauri::command]
@@ -205,9 +206,18 @@ fn set_ghost_settings(settings: GhostSettings, state: State<'_, AppState>) -> Gh
 // ---------------------------------------------------------------------------
 
 fn resolve_themes_directory() -> PathBuf {
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let exe_themes = exe_dir.join("themes");
+            if exe_themes.exists() && exe_themes.is_dir() {
+                return exe_themes;
+            }
+        }
+    }
     let candidates = [
         PathBuf::from("themes"),
         PathBuf::from("../themes"),
+        PathBuf::from("../../themes"),
         dirs::data_dir().map(|d| d.join("opencustom-telegram").join("themes")).unwrap_or_default(),
     ];
     for c in &candidates {
@@ -218,6 +228,79 @@ fn resolve_themes_directory() -> PathBuf {
     let dir = PathBuf::from("themes");
     let _ = fs::create_dir_all(&dir);
     dir
+}
+
+#[tauri::command]
+fn get_file_base64(path: String) -> Result<String, String> {
+    let p = PathBuf::from(&path);
+    if !p.exists() || !p.is_file() {
+        return Err("File does not exist".to_string());
+    }
+    let bytes = fs::read(&p).map_err(|e| e.to_string())?;
+    use base64::engine::general_purpose::STANDARD as BASE64;
+    use base64::Engine as _;
+    let mime = if p.extension().and_then(|s| s.to_str()) == Some("png") {
+        "image/png"
+    } else {
+        "image/jpeg"
+    };
+    Ok(format!("data:{};base64,{}", mime, BASE64.encode(bytes)))
+}
+
+fn dir_size_recursive(path: &std::path::Path) -> u64 {
+    let mut total = 0u64;
+    if let Ok(entries) = fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() {
+                if let Ok(meta) = entry.metadata() {
+                    total += meta.len();
+                }
+            } else if p.is_dir() {
+                total += dir_size_recursive(&p);
+            }
+        }
+    }
+    total
+}
+
+#[tauri::command]
+fn get_cache_size() -> Result<u64, String> {
+    let (_conf_path, data_dir) = Config::resolve_paths(true, None, None);
+    let files_dir = data_dir.join("files");
+    let temp_dir = data_dir.join("temp");
+    let mut total = 0u64;
+    if files_dir.exists() {
+        total += dir_size_recursive(&files_dir);
+    }
+    if temp_dir.exists() {
+        total += dir_size_recursive(&temp_dir);
+    }
+    Ok(total)
+}
+
+#[tauri::command]
+fn clear_cache() -> Result<(), String> {
+    let (_conf_path, data_dir) = Config::resolve_paths(true, None, None);
+    let files_dir = data_dir.join("files");
+    let temp_dir = data_dir.join("temp");
+    if files_dir.exists() {
+        let _ = fs::remove_dir_all(&files_dir);
+        let _ = fs::create_dir_all(&files_dir);
+    }
+    if temp_dir.exists() {
+        let _ = fs::remove_dir_all(&temp_dir);
+        let _ = fs::create_dir_all(&temp_dir);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn set_proxy(
+    proxy: Option<tg_core::domain::ProxyConfig>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    state.handle.set_proxy(proxy).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -500,6 +583,10 @@ pub fn run() {
             save_theme_file,
             import_theme_zip,
             ai_generate,
+            get_file_base64,
+            get_cache_size,
+            clear_cache,
+            set_proxy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

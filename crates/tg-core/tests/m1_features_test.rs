@@ -298,6 +298,8 @@ fn test_order_zero_removal_and_delivery_receipts() {
         is_muted: false,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     };
     let c2 = Chat {
         id: ChatId(2),
@@ -311,6 +313,8 @@ fn test_order_zero_removal_and_delivery_receipts() {
         is_muted: false,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     };
 
     state.insert_or_update_chat(c1);

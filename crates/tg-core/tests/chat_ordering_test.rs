@@ -26,6 +26,8 @@ fn make_test_chat(
         is_muted,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     }
 }
 

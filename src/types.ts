@@ -11,14 +11,21 @@ export interface ChatFolder {
   icon_name?: string;
 }
 
-export interface MessageContent {
-  text?: string;
-  caption?: string;
-  photo?: any;
-  document?: any;
-  voice?: any;
-  audio?: any;
+export interface TextEntity {
+  offset: number;
+  length: number;
+  entity_type: string;
 }
+
+export type MessageContent =
+  | { Text: { text: string; entities?: TextEntity[] } }
+  | { Photo: { caption: string; file_id: number; width: number; height: number } }
+  | { Document: { caption: string; file_name: string; file_id: number; file_size: number } }
+  | { Voice: { caption: string; duration: number; file_id: number } }
+  | { Sticker: { emoji: string; file_id: number; width: number; height: number } }
+  | { Video: { caption: string; duration: number; width: number; height: number; file_id: number } }
+  | { text?: string; caption?: string; [key: string]: any }
+  | string;
 
 export interface Message {
   id: number;
@@ -27,10 +34,10 @@ export interface Message {
   sender_name?: string;
   date: number;
   is_outgoing: boolean;
-  content: MessageContent | string;
+  content: MessageContent;
   reply_to_message_id?: number;
   edit_date?: number;
-  status: 'Sending' | 'Sent' | 'Failed';
+  status: 'Sending' | 'Sent' | 'Read' | 'Failed';
 }
 
 export interface Chat {
@@ -45,6 +52,8 @@ export interface Chat {
   is_muted: boolean;
   has_unread_mention: boolean;
   folder_ids?: number[];
+  photo_file_id?: number;
+  photo_path?: string;
 }
 
 export interface CodeInfo {
@@ -96,6 +105,8 @@ export interface User {
   is_contact?: boolean;
   is_bot?: boolean;
   is_verified?: boolean;
+  photo_file_id?: number;
+  photo_path?: string;
 }
 
 export interface GhostSettings {
@@ -126,4 +137,13 @@ export interface AiRequestPayload {
   model: string;
   system_prompt?: string;
   user_prompt: string;
+}
+
+export interface ProxyConfig {
+  server: string;
+  port: number;
+  proxy_type: 'Socks5' | 'Http' | 'Mtproto';
+  username?: string;
+  password?: string;
+  secret?: string;
 }

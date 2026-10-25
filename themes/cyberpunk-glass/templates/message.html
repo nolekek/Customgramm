@@ -1,18 +1,18 @@
 <div class="msg-container msg-{{direction}}" data-msg-id="{{id}}">
-  <div class="msg-hud-card">
-    <div class="msg-hud-header">
-      <span class="msg-sender">#{{sender}}</span>
-      <span class="msg-hud-tag">//MSG_{{id}}</span>
-    </div>
+  <div class="msg-bubble">
     {{reply_preview}}
+    <div class="msg-header">
+      <span class="msg-sender">{{sender}}</span>
+    </div>
     {{media_html}}
     <div class="msg-content">{{text}}</div>
-    <div class="msg-hud-footer">
+    <div class="msg-footer">
       <span class="msg-time">{{time}}</span>
       <span class="msg-status">{{status_icon}}</span>
       <div class="msg-actions">
-        <button class="msg-btn" data-action="reply" title="Reply">REPLY</button>
-        <button class="msg-btn" data-action="ai-translate" title="Translate">AI_TR</button>
+        <button class="msg-btn" data-action="reply" title="Reply">{{icon_reply}}</button>
+        <button class="msg-btn" data-action="copy" title="Copy text">{{icon_copy}}</button>
+        <button class="msg-btn" data-action="ai-translate" title="Translate">{{icon_translate}}</button>
       </div>
     </div>
   </div>

@@ -18,8 +18,9 @@ export class ThemeEngine {
             <span class="msg-time">{{time}}</span>
             <span class="msg-status">{{status_icon}}</span>
             <div class="msg-actions">
-              <button class="msg-btn" data-action="reply" title="Reply">↩</button>
-              <button class="msg-btn" data-action="ai-translate" title="Translate">🌐</button>
+              <button class="msg-btn" data-action="reply" title="Reply">{{icon_reply}}</button>
+              <button class="msg-btn" data-action="copy" title="Copy text">{{icon_copy}}</button>
+              <button class="msg-btn" data-action="ai-translate" title="Translate">{{icon_translate}}</button>
             </div>
           </div>
         </div>
@@ -28,7 +29,9 @@ export class ThemeEngine {
 
     'chat_item.html': `
       <div class="chat-row {{active_class}}" data-chat-id="{{id}}" data-action="select-chat">
-        <div class="chat-avatar"><span>{{avatar_letter}}</span></div>
+        <div class="chat-avatar" style="{{avatar_style}}" data-avatar-path="{{photo_path}}">
+          {{avatar_content}}
+        </div>
         <div class="chat-info">
           <div class="chat-top-row">
             <span class="chat-title">{{title}}</span>
@@ -45,15 +48,21 @@ export class ThemeEngine {
     'header.html': `
       <div class="chat-header-bar">
         <div class="chat-header-info">
-          <div class="chat-header-avatar">{{avatar_letter}}</div>
+          <div class="chat-header-avatar" style="{{avatar_style}}" data-avatar-path="{{photo_path}}">{{avatar_content}}</div>
           <div class="chat-header-text">
             <h2 class="chat-header-title">{{title}}</h2>
             <span class="chat-header-status">{{status}}</span>
           </div>
         </div>
         <div class="chat-header-actions">
-          <button class="btn-header" data-action="ai-summarize-chat" title="Summarize conversation with AI">✨ Summarize</button>
-          <button class="btn-header" data-action="toggle-ghost" title="Toggle Ghost Mode">👻 Ghost</button>
+          <button class="btn-header" data-action="ai-summarize-chat" title="Summarize conversation with AI">
+            {{icon_sparkles}}
+            <span>Summarize</span>
+          </button>
+          <button class="btn-header" data-action="toggle-ghost" title="Toggle Ghost Mode">
+            {{icon_ghost}}
+            <span>Ghost</span>
+          </button>
         </div>
       </div>
     `.trim(),
@@ -62,10 +71,10 @@ export class ThemeEngine {
       <div class="chat-input-bar">
         {{reply_banner_html}}
         <div class="input-row">
-          <button class="btn-input-tool" data-action="attach-file" title="Attach file">📎</button>
+          <button class="btn-input-tool" data-action="attach-file" title="Attach file">{{icon_attach}}</button>
           <textarea class="chat-textarea" placeholder="{{placeholder}}" rows="1"></textarea>
-          <button class="btn-input-tool" data-action="ai-assist" title="AI Draft Assistant">✨</button>
-          <button class="btn-send" data-action="send-message" title="Send (Enter)">➤</button>
+          <button class="btn-input-tool" data-action="ai-assist" title="AI Draft Assistant">{{icon_sparkles}}</button>
+          <button class="btn-send" data-action="send-message" title="Send (Enter)">{{icon_send}}</button>
         </div>
       </div>
     `.trim(),

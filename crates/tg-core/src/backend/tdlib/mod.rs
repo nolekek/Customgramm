@@ -98,6 +98,32 @@ impl TDLibInner {
         let is_bot = v.get("type").and_then(|t| t.get("@type")).and_then(|s| s.as_str()).map(|s| s.contains("Bot")).unwrap_or(false);
         let is_verified = v.get("is_verified").and_then(|b| b.as_bool()).unwrap_or(false);
 
+        let (photo_file_id, photo_path) = if let Some(photo) = v.get("profile_photo") {
+            let small = photo.get("small");
+            let file_id = small.and_then(|s| s.get("id")).and_then(|id| id.as_i64()).map(|id| id as i32);
+            let local_path = small
+                .and_then(|s| s.get("local"))
+                .and_then(|l| l.get("path"))
+                .and_then(|p| p.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string());
+            if let Some(fid) = file_id {
+                if local_path.is_none() {
+                    let _ = self.send_json(json!({
+                        "@type": "downloadFile",
+                        "file_id": fid,
+                        "priority": 1,
+                        "offset": 0,
+                        "limit": 0,
+                        "synchronous": false
+                    }));
+                }
+            }
+            (file_id, local_path)
+        } else {
+            (None, None)
+        };
+
         Some(User {
             id,
             first_name,
@@ -108,6 +134,8 @@ impl TDLibInner {
             is_contact,
             is_bot,
             is_verified,
+            photo_file_id,
+            photo_path,
         })
     }
 
@@ -687,6 +715,32 @@ impl TDLibInner {
             Vec::new()
         };
 
+        let (photo_file_id, photo_path) = if let Some(photo) = v.get("photo") {
+            let small = photo.get("small");
+            let file_id = small.and_then(|s| s.get("id")).and_then(|id| id.as_i64()).map(|id| id as i32);
+            let local_path = small
+                .and_then(|s| s.get("local"))
+                .and_then(|l| l.get("path"))
+                .and_then(|p| p.as_str())
+                .filter(|s| !s.is_empty())
+                .map(|s| s.to_string());
+            if let Some(fid) = file_id {
+                if local_path.is_none() {
+                    let _ = self.send_json(json!({
+                        "@type": "downloadFile",
+                        "file_id": fid,
+                        "priority": 1,
+                        "offset": 0,
+                        "limit": 0,
+                        "synchronous": false
+                    }));
+                }
+            }
+            (file_id, local_path)
+        } else {
+            (None, None)
+        };
+
         Some(Chat {
             id,
             title,
@@ -699,6 +753,8 @@ impl TDLibInner {
             is_muted,
             has_unread_mention,
             folder_ids,
+            photo_file_id,
+            photo_path,
         })
     }
 
@@ -1119,12 +1175,16 @@ impl TelegramBackend for TDLibBackend {
         let mut req = json!({
             "@type": "sendMessage",
             "chat_id": chat_id.0,
+            "message_thread_id": 0,
+            "options": null,
+            "reply_markup": null,
             "input_message_content": {
                 "@type": "inputMessageText",
                 "text": {
                     "@type": "formattedText",
                     "text": text
-                }
+                },
+                "clear_draft": true
             }
         });
 
@@ -1136,7 +1196,15 @@ impl TelegramBackend for TDLibBackend {
         }
 
         let inner = self.inner.clone();
-        Box::pin(async move { inner.send_json(req) })
+        Box::pin(async move {
+            match inner.send_request(req).await {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    tracing::error!("send_text_message error: {}", e);
+                    Err(e)
+                }
+            }
+        })
     }
 
     fn edit_message_text(

@@ -46,4 +46,8 @@ pub struct Chat {
     pub has_unread_mention: bool,
     #[serde(default)]
     pub folder_ids: Vec<i32>,
+    #[serde(default)]
+    pub photo_file_id: Option<i32>,
+    #[serde(default)]
+    pub photo_path: Option<String>,
 }

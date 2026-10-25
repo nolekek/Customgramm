@@ -30,6 +30,10 @@ pub struct User {
     pub is_contact: bool,
     pub is_bot: bool,
     pub is_verified: bool,
+    #[serde(default)]
+    pub photo_file_id: Option<i32>,
+    #[serde(default)]
+    pub photo_path: Option<String>,
 }
 
 impl User {

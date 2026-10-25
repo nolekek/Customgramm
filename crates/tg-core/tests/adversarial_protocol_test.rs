@@ -441,6 +441,8 @@ fn test_delivery_receipts_out_of_order_and_nonexistent_messages() {
         is_muted: false,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     };
     state.insert_or_update_chat(chat);
 
@@ -585,6 +587,8 @@ fn test_state_apply_update_adversarial_event_stream() {
             is_muted: i % 2 == 0,
             has_unread_mention: i % 3 == 0,
             folder_ids: Vec::new(),
+            photo_file_id: None,
+            photo_path: None,
         };
         events.push(CoreEvent::ChatUpdated(Box::new(chat)));
 

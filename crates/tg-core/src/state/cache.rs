@@ -54,7 +54,12 @@ impl CoreState {
         self.me = Some(user);
     }
 
-    pub fn update_user(&mut self, user: User) {
+    pub fn update_user(&mut self, mut user: User) {
+        if let Some(existing) = self.users.get(&user.id) {
+            if user.photo_path.is_none() && existing.photo_path.is_some() {
+                user.photo_path = existing.photo_path.clone();
+            }
+        }
         let is_me = self.me.as_ref().map(|m| m.id == user.id).unwrap_or(false);
         if is_me {
             self.me = Some(user.clone());
@@ -66,6 +71,9 @@ impl CoreState {
         if let Some(existing) = self.chats.get(&chat.id) {
             if chat.folder_ids.is_empty() && !existing.folder_ids.is_empty() {
                 chat.folder_ids = existing.folder_ids.clone();
+            }
+            if chat.photo_path.is_none() && existing.photo_path.is_some() {
+                chat.photo_path = existing.photo_path.clone();
             }
         }
         self.chats.insert(chat.id, chat);
@@ -292,6 +300,24 @@ impl CoreState {
     }
 
     pub fn update_file(&mut self, file: FileInfo) {
+        if let Some(ref path) = file.local_path {
+            let p_str = path.to_string_lossy().to_string();
+            for chat in self.chats.values_mut() {
+                if chat.photo_file_id == Some(file.id) {
+                    chat.photo_path = Some(p_str.clone());
+                }
+            }
+            for user in self.users.values_mut() {
+                if user.photo_file_id == Some(file.id) {
+                    user.photo_path = Some(p_str.clone());
+                }
+            }
+            if let Some(ref mut me) = self.me {
+                if me.photo_file_id == Some(file.id) {
+                    me.photo_path = Some(p_str);
+                }
+            }
+        }
         self.files.insert(file.id, file);
     }
 

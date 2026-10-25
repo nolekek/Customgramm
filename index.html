@@ -5,136 +5,372 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenCustom Telegram</title>
   <style>
-    /* Base Reset and Layout */
+    /* -----------------------------------------------------------------------
+       Theme System & Dynamic CSS Variables
+       ----------------------------------------------------------------------- */
+    :root {
+      --tg-bg-primary: #1a1b26;
+      --tg-bg-secondary: #16161e;
+      --tg-bg-surface: #24283b;
+      --tg-bg-hover: rgba(255, 255, 255, 0.06);
+      --tg-bg-active: rgba(122, 162, 247, 0.15);
+
+      --tg-text-primary: #c0caf5;
+      --tg-text-secondary: #7aa2f7;
+      --tg-text-muted: #7982a9;
+
+      --tg-accent: #7aa2f7;
+      --tg-accent-hover: #89b4fa;
+      --tg-accent-text: #15161e;
+
+      --tg-bubble-out-bg: #2f354a;
+      --tg-bubble-out-text: #c0caf5;
+      --tg-bubble-in-bg: #24283b;
+      --tg-bubble-in-text: #c0caf5;
+      --tg-bubble-radius: 14px;
+
+      --tg-border: rgba(255, 255, 255, 0.08);
+      --tg-border-active: #7aa2f7;
+      --tg-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+      --tg-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+      --tg-font-size-base: 13.5px;
+    }
+
     *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
+
     html, body {
       height: 100%;
       width: 100%;
       overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #1a1b26;
-      color: #c0caf5;
+      font-family: var(--tg-font-family);
+      font-size: var(--tg-font-size-base);
+      background-color: var(--tg-bg-primary);
+      color: var(--tg-text-primary);
+      user-select: none;
+      -webkit-user-select: none;
     }
+
+    /* SVG Icon Helpers */
+    .svg-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .svg-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
     #app {
       display: flex;
       height: 100vh;
       width: 100vw;
     }
+
+    /* -----------------------------------------------------------------------
+       Sidebar & Folders
+       ----------------------------------------------------------------------- */
     .sidebar {
       width: 320px;
-      min-width: 260px;
+      min-width: 270px;
       max-width: 420px;
       display: flex;
       flex-direction: column;
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
-      background: #16161e;
+      border-right: 1px solid var(--tg-border);
+      background-color: var(--tg-bg-secondary);
       z-index: 10;
     }
+
     .sidebar-header {
-      padding: 12px 16px;
+      padding: 12px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid var(--tg-border);
     }
+
     .app-brand {
       font-weight: 700;
       font-size: 14px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      color: var(--tg-text-primary);
+      letter-spacing: -0.2px;
     }
+
+    .app-brand-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(122, 162, 247, 0.18);
+      color: var(--tg-accent);
+      font-weight: 600;
+    }
+
     .header-actions {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
+
     .ghost-pill {
       font-size: 11px;
       font-weight: 600;
-      padding: 3px 8px;
+      padding: 4px 9px;
       border-radius: 12px;
-      background: rgba(122, 162, 247, 0.15);
-      color: #7aa2f7;
+      background: rgba(122, 162, 247, 0.12);
+      color: var(--tg-accent);
       cursor: pointer;
-      border: 1px solid rgba(122, 162, 247, 0.3);
+      border: 1px solid rgba(122, 162, 247, 0.25);
       transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
     }
+
     .ghost-pill.active {
-      background: rgba(0, 243, 255, 0.2);
+      background: rgba(0, 243, 255, 0.18);
       color: #00f3ff;
       border-color: #00f3ff;
-      box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+      box-shadow: 0 0 10px rgba(0, 243, 255, 0.25);
     }
+
     .icon-btn {
       background: transparent;
       border: none;
-      color: inherit;
+      color: var(--tg-text-primary);
       cursor: pointer;
-      font-size: 15px;
       padding: 6px;
-      border-radius: 6px;
-      opacity: 0.8;
-      transition: all 0.2s;
+      border-radius: 8px;
+      opacity: 0.82;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+
     .icon-btn:hover {
       opacity: 1;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--tg-bg-hover);
     }
+
+    /* Search Box */
     .search-bar {
-      padding: 8px 12px;
+      padding: 10px 14px 6px 14px;
+      position: relative;
     }
+
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon-inside {
+      position: absolute;
+      left: 10px;
+      color: var(--tg-text-muted);
+      pointer-events: none;
+      width: 15px;
+      height: 15px;
+    }
+
     .search-input {
       width: 100%;
-      padding: 8px 12px;
+      padding: 7px 12px 7px 32px;
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.05);
-      color: inherit;
+      border: 1px solid var(--tg-border);
+      background: var(--tg-bg-surface);
+      color: var(--tg-text-primary);
       outline: none;
       font-size: 13px;
+      transition: border-color 0.2s;
     }
+
     .search-input:focus {
-      border-color: #7aa2f7;
+      border-color: var(--tg-accent);
     }
+
+    /* Folder Tabs Bar */
+    .folder-tabs-wrapper {
+      position: relative;
+      border-bottom: 1px solid var(--tg-border);
+      padding: 4px 6px 6px 6px;
+    }
+
     .folder-tabs {
       display: flex;
-      padding: 0 8px 6px 8px;
       gap: 4px;
       overflow-x: auto;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
+    .folder-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
     .folder-tab {
-      padding: 4px 10px;
+      padding: 5px 10px;
       font-size: 12px;
       border-radius: 6px;
       cursor: pointer;
       background: transparent;
       border: none;
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--tg-text-muted);
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+      font-weight: 500;
     }
+
+    .folder-tab:hover {
+      color: var(--tg-text-primary);
+      background: var(--tg-bg-hover);
+    }
+
     .folder-tab.active {
-      background: rgba(255, 255, 255, 0.1);
-      color: #ffffff;
+      background: var(--tg-bg-surface);
+      color: var(--tg-accent);
       font-weight: 600;
+      border-bottom: 2px solid var(--tg-accent);
+      border-radius: 6px 6px 2px 2px;
     }
+
+    .folder-badge {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 8px;
+      background: var(--tg-accent);
+      color: var(--tg-accent-text);
+      font-weight: 700;
+      min-width: 16px;
+      text-align: center;
+    }
+
+    /* Chat List */
     .chat-list {
       flex: 1;
       overflow-y: auto;
       padding: 4px 0;
     }
+
+    .chat-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 12px;
+      cursor: pointer;
+      border-radius: 10px;
+      margin: 2px 8px;
+      transition: background-color 0.15s;
+    }
+
+    .chat-row:hover {
+      background-color: var(--tg-bg-hover);
+    }
+
+    .chat-row.active {
+      background-color: var(--tg-bg-active);
+    }
+
+    .chat-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      flex-shrink: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .chat-avatar img.avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .chat-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 3px;
+    }
+
+    .chat-title {
+      font-weight: 600;
+      font-size: 13.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--tg-text-primary);
+    }
+
+    .chat-time {
+      font-size: 11.5px;
+      color: var(--tg-text-muted);
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+
+    .chat-bottom-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-snippet {
+      font-size: 12.5px;
+      color: var(--tg-text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 6px;
+    }
+
+    .badge-unread {
+      background-color: var(--tg-accent);
+      color: var(--tg-accent-text);
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* -----------------------------------------------------------------------
+       Main Chat Pane
+       ----------------------------------------------------------------------- */
     .chat-area {
       flex: 1;
       display: flex;
       flex-direction: column;
       position: relative;
-      background: #1a1b26;
+      background-color: var(--tg-bg-primary);
     }
+
     .empty-state {
       flex: 1;
       display: flex;
@@ -145,50 +381,404 @@
       text-align: center;
       padding: 40px;
     }
+
     .empty-card {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px dashed rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 24px 32px;
-      max-width: 440px;
+      background: var(--tg-bg-surface);
+      border: 1px dashed var(--tg-border);
+      border-radius: 14px;
+      padding: 28px 36px;
+      max-width: 480px;
+      box-shadow: var(--tg-shadow);
     }
+
     .empty-card h3 {
-      font-size: 16px;
+      font-size: 18px;
       margin-bottom: 8px;
+      color: var(--tg-text-primary);
     }
+
     .empty-card p {
       font-size: 13px;
-      opacity: 0.7;
+      color: var(--tg-text-muted);
       line-height: 1.5;
       margin-bottom: 16px;
     }
+
     .theme-quick-buttons {
       display: flex;
       gap: 8px;
       justify-content: center;
+      flex-wrap: wrap;
     }
+
     .btn-quick-theme {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: inherit;
-      padding: 6px 12px;
-      border-radius: 6px;
+      background: var(--tg-bg-hover);
+      border: 1px solid var(--tg-border);
+      color: var(--tg-text-primary);
+      padding: 7px 14px;
+      border-radius: 8px;
       cursor: pointer;
       font-size: 12px;
+      font-weight: 600;
       transition: all 0.2s;
     }
+
     .btn-quick-theme:hover {
-      background: rgba(122, 162, 247, 0.2);
-      border-color: #7aa2f7;
+      background: var(--tg-bg-active);
+      border-color: var(--tg-accent);
+      color: var(--tg-accent);
     }
+
     .active-chat {
       flex: 1;
       display: flex;
       flex-direction: column;
       height: 100%;
+      min-height: 0;
     }
 
-    /* Modal Styles */
+    /* Chat Header */
+    .chat-header-bar {
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--tg-border);
+      background-color: var(--tg-bg-secondary);
+      flex-shrink: 0;
+    }
+
+    .chat-header-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-header-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .chat-header-avatar img.avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .chat-header-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--tg-text-primary);
+    }
+
+    .chat-header-status {
+      font-size: 11.5px;
+      color: var(--tg-text-muted);
+    }
+
+    .chat-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-header {
+      background: var(--tg-bg-surface);
+      border: 1px solid var(--tg-border);
+      color: var(--tg-text-primary);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-header:hover {
+      background: var(--tg-bg-hover);
+      border-color: var(--tg-accent);
+      color: var(--tg-accent);
+    }
+
+    /* Messages Container */
+    .messages-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 0;
+    }
+
+    .date-divider {
+      align-self: center;
+      margin: 10px 0;
+      background: var(--tg-bg-surface);
+      border: 1px solid var(--tg-border);
+      padding: 3px 12px;
+      border-radius: 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--tg-text-muted);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    .msg-container {
+      display: flex;
+      margin-bottom: 2px;
+      width: 100%;
+    }
+
+    .msg-container.msg-incoming {
+      justify-content: flex-start;
+    }
+
+    .msg-container.msg-outgoing {
+      justify-content: flex-end;
+    }
+
+    .msg-bubble {
+      max-width: 68%;
+      padding: 8px 12px 6px 12px;
+      border-radius: var(--tg-bubble-radius);
+      position: relative;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .msg-incoming .msg-bubble {
+      background-color: var(--tg-bubble-in-bg);
+      color: var(--tg-bubble-in-text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-outgoing .msg-bubble {
+      background-color: var(--tg-bubble-out-bg);
+      color: var(--tg-bubble-out-text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg-header {
+      margin-bottom: 2px;
+    }
+
+    .msg-sender {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--tg-accent);
+    }
+
+    .msg-content {
+      font-size: 13.5px;
+      line-height: 1.45;
+      word-break: break-word;
+      user-select: text;
+    }
+
+    .msg-content strong {
+      font-weight: 700;
+    }
+
+    .msg-content em {
+      font-style: italic;
+    }
+
+    .msg-content .msg-code {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 1px 5px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .msg-content .msg-pre {
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 8px 10px;
+      border-radius: 6px;
+      margin: 6px 0;
+      overflow-x: auto;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .msg-content .msg-link {
+      color: var(--tg-accent);
+      text-decoration: underline;
+    }
+
+    .msg-reply-snippet {
+      font-size: 11px;
+      opacity: 0.8;
+      border-left: 2px solid var(--tg-accent);
+      padding-left: 6px;
+      margin-bottom: 4px;
+      color: var(--tg-text-muted);
+      cursor: pointer;
+    }
+
+    .msg-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+      margin-top: 3px;
+      font-size: 11px;
+      color: var(--tg-text-muted);
+    }
+
+    .msg-time {
+      opacity: 0.8;
+    }
+
+    .msg-status {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 2px;
+    }
+
+    .msg-status .status-clock {
+      opacity: 0.7;
+    }
+    .msg-status .status-check {
+      opacity: 0.8;
+    }
+    .msg-status .status-read {
+      color: var(--tg-accent);
+    }
+
+    .msg-actions {
+      display: none;
+      position: absolute;
+      top: -12px;
+      right: 10px;
+      background: var(--tg-bg-surface);
+      border: 1px solid var(--tg-border);
+      border-radius: 16px;
+      padding: 2px 4px;
+      box-shadow: var(--tg-shadow);
+      gap: 2px;
+    }
+
+    .msg-bubble:hover .msg-actions {
+      display: flex;
+    }
+
+    .msg-btn {
+      background: transparent;
+      border: none;
+      color: var(--tg-text-primary);
+      cursor: pointer;
+      padding: 3px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.75;
+      transition: all 0.15s;
+    }
+
+    .msg-btn:hover {
+      opacity: 1;
+      background: var(--tg-bg-hover);
+      color: var(--tg-accent);
+    }
+
+    /* Message Input Bar */
+    .chat-input-bar {
+      padding: 10px 16px;
+      border-top: 1px solid var(--tg-border);
+      background-color: var(--tg-bg-secondary);
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .chat-textarea {
+      flex: 1;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--tg-border);
+      background: var(--tg-bg-surface);
+      color: var(--tg-text-primary);
+      outline: none;
+      font-family: inherit;
+      font-size: 13.5px;
+      resize: none;
+      max-height: 140px;
+      line-height: 1.4;
+      transition: border-color 0.2s;
+    }
+
+    .chat-textarea:focus {
+      border-color: var(--tg-accent);
+    }
+
+    .btn-input-tool {
+      background: transparent;
+      border: none;
+      color: var(--tg-text-muted);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-input-tool:hover {
+      color: var(--tg-text-primary);
+      background: var(--tg-bg-hover);
+    }
+
+    .btn-send {
+      background: var(--tg-accent);
+      color: var(--tg-accent-text);
+      border: none;
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-send:hover {
+      background: var(--tg-accent-hover);
+      transform: scale(1.02);
+    }
+
+    /* -----------------------------------------------------------------------
+       Modals System
+       ----------------------------------------------------------------------- */
     .modal-backdrop {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -202,45 +792,55 @@
     .modal-backdrop.open {
       display: flex;
     }
+
     .modal-dialog {
-      background: #1f2335;
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: var(--tg-bg-surface);
+      border: 1px solid var(--tg-border);
       border-radius: 14px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--tg-shadow);
       width: 90%;
       max-width: 580px;
       max-height: 85vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      animation: modalSlide 0.2s ease-out;
+      animation: modalSlide 0.18s ease-out;
     }
+
     .modal-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--tg-border);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
+
     .modal-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
+      color: var(--tg-text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
+
     .modal-body {
-      padding: 20px;
+      padding: 18px;
       overflow-y: auto;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
+
     .modal-footer {
-      padding: 14px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 18px;
+      border-top: 1px solid var(--tg-border);
       display: flex;
       justify-content: flex-end;
       gap: 10px;
     }
+
     .btn-modal {
       padding: 8px 16px;
       border-radius: 8px;
@@ -249,90 +849,250 @@
       cursor: pointer;
       border: none;
       transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
+
     .btn-primary {
-      background: #7aa2f7;
-      color: #15161e;
+      background: var(--tg-accent);
+      color: var(--tg-accent-text);
     }
     .btn-primary:hover {
-      background: #89b4fa;
+      background: var(--tg-accent-hover);
     }
+
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      color: #ffffff;
+      background: var(--tg-bg-hover);
+      color: var(--tg-text-primary);
+      border: 1px solid var(--tg-border);
     }
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.12);
     }
-    .dropzone {
-      border: 2px dashed rgba(122, 162, 247, 0.4);
-      border-radius: 12px;
-      padding: 24px;
-      text-align: center;
-      background: rgba(122, 162, 247, 0.05);
-      cursor: pointer;
-      transition: all 0.2s;
+
+    .btn-danger {
+      background: rgba(247, 118, 142, 0.15);
+      color: #f7768e;
+      border: 1px solid rgba(247, 118, 142, 0.35);
     }
-    .dropzone.dragover {
-      border-color: #7aa2f7;
-      background: rgba(122, 162, 247, 0.15);
+    .btn-danger:hover {
+      background: rgba(247, 118, 142, 0.25);
     }
+
+    /* Form Components */
     .form-group {
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
+
     .form-label {
       font-size: 12px;
       font-weight: 600;
-      opacity: 0.8;
+      color: var(--tg-text-muted);
     }
+
     .form-input, .form-select, .form-textarea {
-      padding: 10px 12px;
+      padding: 9px 12px;
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(0, 0, 0, 0.25);
-      color: inherit;
+      border: 1px solid var(--tg-border);
+      background: var(--tg-bg-secondary);
+      color: var(--tg-text-primary);
       outline: none;
       font-family: inherit;
       font-size: 13px;
     }
+
     .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: #7aa2f7;
+      border-color: var(--tg-accent);
     }
+
+    /* -----------------------------------------------------------------------
+       Unified Settings Modal Layout
+       ----------------------------------------------------------------------- */
+    .settings-dialog {
+      max-width: 820px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .settings-layout {
+      display: flex;
+      flex: 1;
+      height: 100%;
+      min-height: 0;
+    }
+
+    .settings-sidebar {
+      width: 220px;
+      border-right: 1px solid var(--tg-border);
+      background: var(--tg-bg-secondary);
+      display: flex;
+      flex-direction: column;
+      padding: 12px 8px;
+    }
+
+    .settings-sidebar-header {
+      padding: 8px 12px 14px 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--tg-text-primary);
+    }
+
+    .settings-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .settings-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      color: var(--tg-text-muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: left;
+      transition: all 0.15s;
+    }
+
+    .settings-nav-item:hover {
+      background: var(--tg-bg-hover);
+      color: var(--tg-text-primary);
+    }
+
+    .settings-nav-item.active {
+      background: var(--tg-bg-active);
+      color: var(--tg-accent);
+      font-weight: 600;
+    }
+
+    .settings-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--tg-bg-surface);
+      min-width: 0;
+    }
+
+    .settings-content-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--tg-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .settings-tab-pane {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Themes Grid in Settings */
     .theme-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 12px;
+      gap: 10px;
     }
+
     .theme-card {
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--tg-border);
       border-radius: 10px;
       padding: 12px;
       cursor: pointer;
-      background: rgba(255, 255, 255, 0.03);
-      transition: all 0.2s;
+      background: var(--tg-bg-secondary);
+      transition: all 0.18s;
     }
+
     .theme-card:hover {
-      border-color: #7aa2f7;
+      border-color: var(--tg-accent);
       transform: translateY(-2px);
     }
+
     .theme-card.selected {
-      border-color: #7aa2f7;
-      background: rgba(122, 162, 247, 0.1);
-      box-shadow: 0 0 12px rgba(122, 162, 247, 0.3);
+      border-color: var(--tg-accent);
+      background: var(--tg-bg-active);
+      box-shadow: 0 0 10px rgba(122, 162, 247, 0.25);
     }
+
     .theme-card h4 {
       font-size: 13px;
       margin-bottom: 4px;
+      color: var(--tg-text-primary);
     }
+
     .theme-card p {
       font-size: 11px;
-      opacity: 0.6;
+      color: var(--tg-text-muted);
       line-height: 1.3;
     }
+
+    .dropzone {
+      border: 2px dashed var(--tg-accent);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      background: rgba(122, 162, 247, 0.05);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--tg-accent-hover);
+      background: rgba(122, 162, 247, 0.15);
+    }
+
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      z-index: 200;
+      background: var(--tg-bg-surface);
+      border: 1px solid var(--tg-border);
+      border-radius: 10px;
+      box-shadow: var(--tg-shadow);
+      padding: 4px;
+      display: none;
+      flex-direction: column;
+      min-width: 150px;
+    }
+
+    .context-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--tg-text-primary);
+      cursor: pointer;
+      font-size: 12.5px;
+      text-align: left;
+      transition: background 0.15s;
+    }
+
+    .context-menu-item:hover {
+      background: var(--tg-bg-hover);
+      color: var(--tg-accent);
+    }
+
+    .context-menu-item.danger:hover {
+      color: #f7768e;
+    }
+
     @keyframes modalSlide {
-      from { opacity: 0; transform: scale(0.95); }
+      from { opacity: 0; transform: scale(0.96); }
       to { opacity: 1; transform: scale(1); }
     }
   </style>
@@ -343,28 +1103,43 @@
     <div class="sidebar">
       <div class="sidebar-header">
         <div class="app-brand">
-          <span>⚡</span>
+          <span class="svg-icon" id="brand-logo-icon"></span>
           <span>OpenCustom</span>
+          <span class="app-brand-badge">PRO</span>
         </div>
         <div class="header-actions">
-          <div id="ghost-pill" class="ghost-pill active" title="Ghost Mode: Active">👻 GHOST</div>
-          <button id="btn-open-ai" class="icon-btn" title="AI Assistant">✨</button>
-          <button id="btn-open-themes" class="icon-btn" title="Theme Manager">🎨</button>
-          <button id="btn-auth-status" class="icon-btn" title="Account / Login">👤</button>
+          <div id="ghost-pill" class="ghost-pill active" title="Ghost Mode: Active">
+            <span class="svg-icon" id="ghost-pill-icon"></span>
+            <span>GHOST</span>
+          </div>
+          <button id="btn-open-ai" class="icon-btn" title="AI Assistant">
+            <span class="svg-icon" id="btn-ai-icon"></span>
+          </button>
+          <button id="btn-open-settings" class="icon-btn" title="Settings & Appearance">
+            <span class="svg-icon" id="btn-settings-icon"></span>
+          </button>
+          <button id="btn-auth-status" class="icon-btn" title="Account / Profile">
+            <span class="svg-icon" id="btn-account-icon"></span>
+          </button>
         </div>
       </div>
 
+      <!-- Search Input -->
       <div class="search-bar">
-        <input id="chat-search" class="search-input" type="text" placeholder="Search chats...">
+        <div class="search-wrapper">
+          <span class="search-icon-inside svg-icon" id="search-input-icon"></span>
+          <input id="chat-search" class="search-input" type="text" placeholder="Search chats and contacts (Ctrl+K)...">
+        </div>
       </div>
 
-      <div class="folder-tabs">
-        <button class="folder-tab active" data-folder="all">Все</button>
-        <button class="folder-tab" data-folder="private">Личные</button>
-        <button class="folder-tab" data-folder="groups">Группы</button>
-        <button class="folder-tab" data-folder="channels">Каналы</button>
+      <!-- Folder Tabs Bar -->
+      <div class="folder-tabs-wrapper">
+        <div id="folder-tabs-container" class="folder-tabs">
+          <!-- Dynamically populated categories & official folders -->
+        </div>
       </div>
 
+      <!-- Chat List -->
       <div id="chat-list" class="chat-list">
         <!-- Rendered dynamically by ThemeEngine via chat_item.html -->
       </div>
@@ -375,12 +1150,13 @@
       <!-- Empty State -->
       <div id="empty-chat-placeholder" class="empty-state">
         <div class="empty-card">
+          <div style="margin-bottom: 12px; display: inline-flex; padding: 12px; border-radius: 50%; background: var(--tg-bg-hover);" id="empty-state-icon"></div>
           <h3>OpenCustom Telegram</h3>
-          <p>Fully customizable Telegram desktop client powered by native TDLib, HTML/CSS themes, and AI styling.</p>
-          <p>Drag & drop any theme <code>.zip</code> file onto the screen to apply it instantly, or switch below:</p>
+          <p>Next-generation customizable Telegram Desktop client powered by TDLib 1.8.x native core, HTML/CSS theme bundles, and AI styling.</p>
+          <p style="font-size: 12px; opacity: 0.7;">Select a conversation on the left, or quickly test themes below:</p>
           <div class="theme-quick-buttons">
-            <button class="btn-quick-theme" data-theme-id="tokyo-night">Tokyo Night</button>
             <button class="btn-quick-theme" data-theme-id="modern-dark">Modern Dark</button>
+            <button class="btn-quick-theme" data-theme-id="tokyo-night">Tokyo Night</button>
             <button class="btn-quick-theme" data-theme-id="cyberpunk-glass">Cyberpunk Glass</button>
           </div>
         </div>
@@ -401,45 +1177,226 @@
     </div>
   </div>
 
-  <!-- Theme Manager & Live Editor Modal -->
-  <div id="theme-modal" class="modal-backdrop">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 class="modal-title">🎨 Theme Manager & Live Hot-Reload</h3>
-        <button class="icon-btn btn-close-modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Available Themes</label>
-          <div id="theme-grid" class="theme-grid">
-            <!-- Rendered dynamically -->
+  <!-- Message Right-Click Context Menu -->
+  <div id="message-context-menu" class="context-menu">
+    <button class="context-menu-item" id="ctx-reply">
+      <span class="svg-icon" id="ctx-icon-reply"></span>
+      <span>Reply</span>
+    </button>
+    <button class="context-menu-item" id="ctx-copy">
+      <span class="svg-icon" id="ctx-icon-copy"></span>
+      <span>Copy Text</span>
+    </button>
+    <button class="context-menu-item" id="ctx-edit">
+      <span class="svg-icon" id="ctx-icon-edit"></span>
+      <span>Edit Message</span>
+    </button>
+    <button class="context-menu-item danger" id="ctx-delete">
+      <span class="svg-icon" id="ctx-icon-delete"></span>
+      <span>Delete</span>
+    </button>
+  </div>
+
+  <!-- Unified Settings Modal -->
+  <div id="settings-modal" class="modal-backdrop">
+    <div class="modal-dialog settings-dialog">
+      <div class="settings-layout">
+        <!-- Sidebar Navigation -->
+        <div class="settings-sidebar">
+          <div class="settings-sidebar-header">
+            <h3>Settings</h3>
+          </div>
+          <nav class="settings-nav">
+            <button class="settings-nav-item active" data-tab="account">
+              <span class="svg-icon" id="nav-icon-account"></span>
+              <span>My Account</span>
+            </button>
+            <button class="settings-nav-item" data-tab="themes">
+              <span class="svg-icon" id="nav-icon-themes"></span>
+              <span>Appearance & Themes</span>
+            </button>
+            <button class="settings-nav-item" data-tab="ghost">
+              <span class="svg-icon" id="nav-icon-ghost"></span>
+              <span>Privacy & Ghost Mode</span>
+            </button>
+            <button class="settings-nav-item" data-tab="storage">
+              <span class="svg-icon" id="nav-icon-storage"></span>
+              <span>Data & Storage</span>
+            </button>
+            <button class="settings-nav-item" data-tab="hotkeys">
+              <span class="svg-icon" id="nav-icon-hotkeys"></span>
+              <span>Hotkeys & Tips</span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Content Area -->
+        <div class="settings-content">
+          <div class="settings-content-header">
+            <h3 id="settings-tab-title">My Account</h3>
+            <button class="icon-btn btn-close-modal" title="Close">✕</button>
+          </div>
+
+          <!-- Tab 1: My Account -->
+          <div class="settings-tab-pane" id="tab-pane-account">
+            <div style="display: flex; align-items: center; gap: 16px; padding: 12px; background: var(--tg-bg-secondary); border-radius: 12px; border: 1px solid var(--tg-border);">
+              <div id="account-avatar" class="chat-avatar" style="width: 64px; height: 64px; font-size: 24px;">U</div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div id="account-name" style="font-size: 17px; font-weight: 700; color: var(--tg-text-primary);">Telegram User</div>
+                <div id="account-username" style="font-size: 13px; color: var(--tg-accent);">@username</div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; background: var(--tg-bg-secondary); border-radius: 12px; padding: 14px; border: 1px solid var(--tg-border);">
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span style="color: var(--tg-text-muted);">Phone Number</span>
+                <span id="account-phone" style="font-weight: 600;">—</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span style="color: var(--tg-text-muted);">Telegram ID</span>
+                <span id="account-id" style="font-family: monospace; font-size: 12px;">—</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span style="color: var(--tg-text-muted);">Connection Status</span>
+                <span id="account-status" style="font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #9ece6a; box-shadow: 0 0 6px #9ece6a;"></span>
+                  Online
+                </span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span style="color: var(--tg-text-muted);">Core Engine</span>
+                <span id="account-connection" style="font-size: 12px;">TDLib 1.8.x Native Core</span>
+              </div>
+            </div>
+
+            <button id="btn-account-logout" class="btn-modal btn-danger" style="margin-top: auto;">
+              <span class="svg-icon" id="btn-logout-icon"></span>
+              <span>Log Out of Telegram</span>
+            </button>
+          </div>
+
+          <!-- Tab 2: Appearance & Themes -->
+          <div class="settings-tab-pane" id="tab-pane-themes" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">Installed Themes</label>
+              <div id="theme-grid" class="theme-grid"></div>
+            </div>
+
+            <div id="theme-dropzone" class="dropzone">
+              <p>📦 <strong>Drag & Drop theme .zip archive here</strong></p>
+              <span style="font-size: 11px; opacity: 0.6;">Instantly imports HTML/CSS theme package</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Live CSS & Template Hot-Reload</label>
+              <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                <select id="editor-file-select" class="form-select" style="flex: 1;">
+                  <option value="style.css">style.css</option>
+                  <option value="templates/message.html">templates/message.html</option>
+                  <option value="templates/chat_item.html">templates/chat_item.html</option>
+                  <option value="templates/header.html">templates/header.html</option>
+                  <option value="templates/input.html">templates/input.html</option>
+                </select>
+                <button id="btn-save-editor" class="btn-modal btn-primary">Apply & Save</button>
+              </div>
+              <textarea id="live-code-editor" class="form-textarea" rows="6" spellcheck="false" style="font-family: monospace; font-size: 12px;"></textarea>
+            </div>
+
+            <button id="btn-copy-ai-prompt" class="btn-modal btn-secondary">
+              <span class="svg-icon" id="btn-prompt-icon"></span>
+              <span>Copy AI Theme Prompt Generator Guide</span>
+            </button>
+          </div>
+
+          <!-- Tab 3: Privacy & Ghost Mode -->
+          <div class="settings-tab-pane" id="tab-pane-ghost" style="display: none;">
+            <p style="font-size: 13px; color: var(--tg-text-muted); line-height: 1.4;">
+              Ghost Mode provides maximum privacy by intercepting background status signals before they reach Telegram servers.
+            </p>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--tg-bg-secondary); border-radius: 10px; border: 1px solid var(--tg-border);">
+              <div>
+                <div style="font-weight: 600; font-size: 13.5px;">Suppress Read Receipts</div>
+                <div style="font-size: 11.5px; color: var(--tg-text-muted);">Never mark incoming messages as read when opening chats</div>
+              </div>
+              <input type="checkbox" id="chk-ghost-read" checked style="width: 18px; height: 18px; cursor: pointer;">
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--tg-bg-secondary); border-radius: 10px; border: 1px solid var(--tg-border);">
+              <div>
+                <div style="font-weight: 600; font-size: 13.5px;">Hide Typing Indicators</div>
+                <div style="font-size: 11.5px; color: var(--tg-text-muted);">Never broadcast typing or file uploading statuses to other users</div>
+              </div>
+              <input type="checkbox" id="chk-ghost-typing" checked style="width: 18px; height: 18px; cursor: pointer;">
+            </div>
+
+            <button id="btn-save-ghost" class="btn-modal btn-primary" style="margin-top: 10px; align-self: flex-start;">Save Privacy Settings</button>
+          </div>
+
+          <!-- Tab 4: Data & Storage / Cache -->
+          <div class="settings-tab-pane" id="tab-pane-storage" style="display: none;">
+            <div style="background: var(--tg-bg-secondary); border-radius: 12px; padding: 14px; border: 1px solid var(--tg-border); display: flex; flex-direction: column; gap: 8px;">
+              <h4 style="font-size: 14px; font-weight: 700;">TDLib Local Cache & Files</h4>
+              <p style="font-size: 12.5px; color: var(--tg-text-muted);">
+                Media files, profile avatars, stickers, and temporary downloads stored locally on disk.
+              </p>
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 6px;">
+                <span style="font-size: 13px; font-weight: 600;">Current Cache Size:</span>
+                <span id="cache-size-display" style="font-size: 14px; font-weight: 700; color: var(--tg-accent);">Calculating...</span>
+              </div>
+              <button id="btn-clear-cache" class="btn-modal btn-danger" style="margin-top: 6px; align-self: flex-start;">
+                <span class="svg-icon" id="btn-clear-cache-icon"></span>
+                <span>Clear Local Cache</span>
+              </button>
+            </div>
+
+            <!-- Proxy Configuration -->
+            <div style="background: var(--tg-bg-secondary); border-radius: 12px; padding: 14px; border: 1px solid var(--tg-border); display: flex; flex-direction: column; gap: 10px;">
+              <h4 style="font-size: 14px; font-weight: 700;">Proxy Settings (SOCKS5 / MTProto)</h4>
+              <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 2;">
+                  <label class="form-label">Server Host</label>
+                  <input id="proxy-host" type="text" class="form-input" placeholder="127.0.0.1 or proxy.example.com">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                  <label class="form-label">Port</label>
+                  <input id="proxy-port" type="number" class="form-input" placeholder="1080">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Proxy Protocol</label>
+                <select id="proxy-type" class="form-select">
+                  <option value="Socks5">SOCKS5</option>
+                  <option value="Http">HTTP</option>
+                  <option value="Mtproto">MTProto</option>
+                </select>
+              </div>
+              <button id="btn-save-proxy" class="btn-modal btn-primary" style="align-self: flex-start;">Save Proxy Configuration</button>
+            </div>
+          </div>
+
+          <!-- Tab 5: Hotkeys & Tips -->
+          <div class="settings-tab-pane" id="tab-pane-hotkeys" style="display: none;">
+            <div style="background: var(--tg-bg-secondary); border-radius: 12px; padding: 14px; border: 1px solid var(--tg-border); display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span>Send message</span>
+                <kbd style="background: var(--tg-bg-surface); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--tg-border);">Enter</kbd>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span>New line in input</span>
+                <kbd style="background: var(--tg-bg-surface); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--tg-border);">Shift + Enter</kbd>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span>Search chats</span>
+                <kbd style="background: var(--tg-bg-surface); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--tg-border);">Ctrl + K</kbd>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span>Close modal / Cancel reply</span>
+                <kbd style="background: var(--tg-bg-surface); padding: 2px 8px; border-radius: 4px; border: 1px solid var(--tg-border);">Escape</kbd>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div id="theme-dropzone" class="dropzone">
-          <p>📦 <strong>Drag & Drop theme .zip archive here</strong></p>
-          <span style="font-size: 11px; opacity: 0.6;">Instantly imports theme and hot-reloads interface</span>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Live CSS & Template Editor</label>
-          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-            <select id="editor-file-select" class="form-select" style="flex: 1;">
-              <option value="style.css">style.css</option>
-              <option value="templates/message.html">templates/message.html</option>
-              <option value="templates/chat_item.html">templates/chat_item.html</option>
-              <option value="templates/header.html">templates/header.html</option>
-              <option value="templates/input.html">templates/input.html</option>
-            </select>
-            <button id="btn-save-editor" class="btn-modal btn-primary">Apply & Save</button>
-          </div>
-          <textarea id="live-code-editor" class="form-textarea" rows="8" spellcheck="false" style="font-family: monospace; font-size: 12px;"></textarea>
-        </div>
-
-        <button id="btn-copy-ai-prompt" class="btn-modal btn-secondary" style="width: 100%;">📋 Copy AI Prompt Guide (AI_THEME_PROMPT.md)</button>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-modal btn-secondary btn-close-modal">Close</button>
       </div>
     </div>
   </div>
@@ -448,31 +1405,34 @@
   <div id="ai-modal" class="modal-backdrop">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3 class="modal-title">✨ AI Assistant (User API)</h3>
+        <h3 class="modal-title">
+          <span class="svg-icon" id="ai-modal-header-icon"></span>
+          <span>AI Assistant</span>
+        </h3>
         <button class="icon-btn btn-close-modal">✕</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">AI Provider</label>
           <select id="ai-provider" class="form-select">
-            <option value="openai">OpenAI / Groq / DeepSeek / Local Ollama (OpenAI-compatible)</option>
+            <option value="openai">OpenAI / Groq / DeepSeek / Ollama</option>
             <option value="gemini">Google Gemini API</option>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">API Key</label>
-          <input id="ai-api-key" type="password" class="form-input" placeholder="Enter your API key...">
+          <input id="ai-api-key" type="password" class="form-input" placeholder="Enter API key...">
         </div>
         <div class="form-group">
           <label class="form-label">Model Name</label>
-          <input id="ai-model" type="text" class="form-input" placeholder="e.g. gpt-4o, gemini-1.5-flash, llama3">
+          <input id="ai-model" type="text" class="form-input" placeholder="e.g. gpt-4o, gemini-1.5-flash">
         </div>
         <div class="form-group">
           <label class="form-label">Actions</label>
           <div style="display: flex; gap: 8px;">
-            <button id="btn-ai-summarize" class="btn-modal btn-secondary" style="flex: 1;">📝 Summarize Chat</button>
-            <button id="btn-ai-translate" class="btn-modal btn-secondary" style="flex: 1;">🌐 Translate</button>
-            <button id="btn-ai-reply" class="btn-modal btn-primary" style="flex: 1;">✍️ Draft Reply</button>
+            <button id="btn-ai-summarize" class="btn-modal btn-secondary" style="flex: 1;">Summarize Chat</button>
+            <button id="btn-ai-translate" class="btn-modal btn-secondary" style="flex: 1;">Translate</button>
+            <button id="btn-ai-reply" class="btn-modal btn-primary" style="flex: 1;">Draft Reply</button>
           </div>
         </div>
         <div class="form-group">
@@ -487,40 +1447,7 @@
     </div>
   </div>
 
-  <!-- Ghost Mode Settings Modal -->
-  <div id="ghost-modal" class="modal-backdrop">
-    <div class="modal-dialog" style="max-width: 440px;">
-      <div class="modal-header">
-        <h3 class="modal-title">👻 Ghost Mode (Privacy Settings)</h3>
-        <button class="icon-btn btn-close-modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <p style="font-size: 13px; opacity: 0.75; line-height: 1.4;">
-          Ghost Mode ensures you can browse Telegram without alerting others or leaving trace markers.
-        </p>
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px;">
-          <div>
-            <div style="font-weight: 600; font-size: 13px;">Suppress Read Receipts</div>
-            <div style="font-size: 11px; opacity: 0.6;">Never send read checkmarks when opening chats</div>
-          </div>
-          <input type="checkbox" id="chk-ghost-read" checked style="width: 18px; height: 18px; cursor: pointer;">
-        </div>
-
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px;">
-          <div>
-            <div style="font-weight: 600; font-size: 13px;">Hide Typing Indicators</div>
-            <div style="font-size: 11px; opacity: 0.6;">Do not broadcast "typing..." status while composing</div>
-          </div>
-          <input type="checkbox" id="chk-ghost-typing" checked style="width: 18px; height: 18px; cursor: pointer;">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="btn-save-ghost" class="btn-modal btn-primary">Save Settings</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Auth & Account Modal -->
+  <!-- Auth & Login Modal -->
   <div id="auth-modal" class="modal-backdrop">
     <div class="modal-dialog" style="max-width: 440px;">
       <div class="modal-header">
@@ -528,43 +1455,6 @@
         <button class="icon-btn btn-close-modal">✕</button>
       </div>
       <div class="modal-body">
-        <!-- Account Step (When Logged In) -->
-        <div id="auth-step-account" class="form-group" style="display: none; align-items: center; text-align: center; gap: 14px;">
-          <div id="account-avatar" style="width: 76px; height: 76px; border-radius: 50%; background: linear-gradient(135deg, #7aa2f7, #bb9af7); color: #1a1b26; font-size: 30px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(122,162,247,0.35);">
-            U
-          </div>
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <div id="account-name" style="font-size: 18px; font-weight: 700; color: #ffffff;">Telegram User</div>
-            <div id="account-username" style="font-size: 13px; color: #7aa2f7;">@username</div>
-          </div>
-
-          <div style="width: 100%; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px; text-align: left; margin-top: 4px;">
-            <div style="display: flex; justify-content: space-between; font-size: 13px;">
-              <span style="opacity: 0.6;">Phone Number</span>
-              <span id="account-phone" style="font-weight: 600;">—</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px;">
-              <span style="opacity: 0.6;">Telegram ID</span>
-              <span id="account-id" style="font-family: monospace; font-size: 12px; opacity: 0.85;">—</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px;">
-              <span style="opacity: 0.6;">Status</span>
-              <span id="account-status" style="color: #9ece6a; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #9ece6a; box-shadow: 0 0 6px #9ece6a;"></span>
-                Online
-              </span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px;">
-              <span style="opacity: 0.6;">Connection</span>
-              <span id="account-connection" style="opacity: 0.85;">Ready (TDLib Core)</span>
-            </div>
-          </div>
-
-          <button id="btn-account-logout" class="btn-modal" style="background: rgba(247, 118, 142, 0.15); color: #f7768e; border: 1px solid rgba(247, 118, 142, 0.35); width: 100%; margin-top: 6px; padding: 10px;">
-            🚪 Log Out of Telegram
-          </button>
-        </div>
-
         <!-- Phone Step -->
         <div id="auth-step-phone" class="form-group">
           <label class="form-label">Phone Number (International format)</label>
@@ -590,19 +1480,19 @@
 
         <!-- QR Code Step -->
         <div id="auth-step-qr" class="form-group" style="display: none; text-align: center; align-items: center;">
-          <h4 style="font-size: 15px; margin-bottom: 4px; color: #ffffff;">Log in by QR Code</h4>
-          <p style="font-size: 12px; opacity: 0.7; margin-bottom: 12px; line-height: 1.4;">
-            Open Telegram on your mobile device &rarr; Settings &rarr; Devices &rarr; <strong>Link Desktop Device</strong>
+          <h4 style="font-size: 15px; margin-bottom: 4px; color: var(--tg-text-primary);">Log in with QR Code</h4>
+          <p style="font-size: 12px; color: var(--tg-text-muted); margin-bottom: 12px; line-height: 1.4;">
+            Open Telegram &rarr; Settings &rarr; Devices &rarr; <strong>Link Desktop Device</strong>
           </p>
-          <div id="qr-container" style="background: white; padding: 12px; border-radius: 12px; display: inline-flex; justify-content: center; align-items: center; min-width: 220px; min-height: 220px; box-shadow: 0 4px 20px rgba(0,0,0,0.35);">
+          <div id="qr-container" style="background: white; padding: 12px; border-radius: 12px; display: inline-flex; justify-content: center; align-items: center; min-width: 220px; min-height: 220px; box-shadow: var(--tg-shadow);">
             <div style="color: #333; font-size: 12px;">Generating QR code...</div>
           </div>
           <div style="display: flex; gap: 8px; margin-top: 12px; width: 100%;">
-            <button id="btn-copy-qr-link" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">📋 Copy Link</button>
-            <button id="btn-refresh-qr" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">🔄 Refresh QR</button>
-            <button id="btn-qr-back-to-phone" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">📱 Use Phone Number</button>
+            <button id="btn-copy-qr-link" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">Copy Link</button>
+            <button id="btn-refresh-qr" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">Refresh</button>
+            <button id="btn-qr-back-to-phone" class="btn-modal btn-secondary" style="flex: 1; font-size: 12px;">Use Phone</button>
           </div>
-          <span id="qr-status-msg" style="font-size: 11px; opacity: 0.5; margin-top: 6px;">QR code updates automatically</span>
+          <span id="qr-status-msg" style="font-size: 11px; opacity: 0.6; margin-top: 6px;">QR code updates automatically</span>
         </div>
       </div>
       <div class="modal-footer">

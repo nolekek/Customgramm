@@ -18,6 +18,8 @@ fn test_core_state_chat_ordering() {
         is_muted: false,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     };
 
     let chat2 = Chat {
@@ -32,6 +34,8 @@ fn test_core_state_chat_ordering() {
         is_muted: false,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     };
 
     let chat3 = Chat {
@@ -46,6 +50,8 @@ fn test_core_state_chat_ordering() {
         is_muted: false,
         has_unread_mention: false,
         folder_ids: Vec::new(),
+        photo_file_id: None,
+        photo_path: None,
     };
 
     state.insert_or_update_chat(chat1);

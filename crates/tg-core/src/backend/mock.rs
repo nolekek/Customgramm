@@ -58,6 +58,8 @@ impl MockBackend {
             is_contact: true,
             is_bot: false,
             is_verified: true,
+            photo_file_id: None,
+            photo_path: None,
         };
         self.emit(CoreEvent::UserUpdated(Box::new(my_user.clone())));
         self.emit(CoreEvent::MeUpdated(Box::new(my_user)));
@@ -130,6 +132,8 @@ impl MockBackend {
                 is_muted: false,
                 has_unread_mention: false,
                 folder_ids: Vec::new(),
+                photo_file_id: None,
+                photo_path: None,
             };
 
             // Seed initial message history for pagination tests and multimedia fixtures
