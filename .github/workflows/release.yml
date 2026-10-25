@@ -31,13 +31,7 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm ci
 
-      - name: Build Web Frontend
-        run: npm run build
-
-      - name: Build Windows Binary via Tauri
-        run: npx @tauri-apps/cli build --no-bundle
-
-      - name: Package Windows Archive
+      - name: Build & Package Windows Distribution
         shell: pwsh
         run: .\scripts\package-windows.ps1
 
