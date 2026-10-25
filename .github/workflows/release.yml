@@ -1,0 +1,115 @@
+name: Release Builds
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Web Frontend
+        run: npm run build
+
+      - name: Build Windows Binary
+        run: cargo build --release -p app
+
+      - name: Package Windows Archive
+        shell: pwsh
+        run: .\scripts\package-windows.ps1
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenCustomTelegram-windows-x64
+          path: releases/OpenCustomTelegram-windows-x64.zip
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: releases/OpenCustomTelegram-windows-x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    name: Build Linux x64
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install System Dependencies for Tauri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+
+      - name: Build Web Frontend
+        run: npm run build
+
+      - name: Build Linux Binary
+        run: cargo build --release -p app
+
+      - name: Package Linux Distribution
+        run: |
+          mkdir -p releases/OpenCustomTelegram-linux-x64
+          cp target/release/app releases/OpenCustomTelegram-linux-x64/OpenCustomTelegram
+          chmod +x releases/OpenCustomTelegram-linux-x64/OpenCustomTelegram
+          cp .data/libtdjson.so releases/OpenCustomTelegram-linux-x64/libtdjson.so
+          cp -r themes releases/OpenCustomTelegram-linux-x64/
+          cp AI_THEME_PROMPT.md releases/OpenCustomTelegram-linux-x64/
+          cat << 'EOF' > releases/OpenCustomTelegram-linux-x64/run.sh
+          #!/bin/bash
+          DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+          cd "$DIR"
+          chmod +x ./OpenCustomTelegram
+          export LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"
+          exec ./OpenCustomTelegram "$@"
+          EOF
+          chmod +x releases/OpenCustomTelegram-linux-x64/run.sh
+          cd releases && tar -czf OpenCustomTelegram-linux-x64.tar.gz OpenCustomTelegram-linux-x64
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenCustomTelegram-linux-x64
+          path: releases/OpenCustomTelegram-linux-x64.tar.gz
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: releases/OpenCustomTelegram-linux-x64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

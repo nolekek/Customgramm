@@ -2,6 +2,7 @@
 /src-tauri/target/
 node_modules/
 dist/
+releases/
 *.log
 .data/
 crates/*/.data/
