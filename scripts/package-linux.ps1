@@ -26,9 +26,9 @@ if (-not $RustCheck) {
     wsl -d Ubuntu -u root -- bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
 }
 
-# 3. Compile Linux release binary inside WSL
-Write-Host "[3/5] Compiling Linux binary inside WSL..." -ForegroundColor Yellow
-wsl -d Ubuntu -u root -- bash -c 'source $HOME/.cargo/env && cd /mnt/c/Users/Admin/TelegramRape/TelegramFullOpenCustom && cargo build --release -p app'
+# 3. Compile Linux release binary inside WSL via Tauri build (embedded assets)
+Write-Host "[3/5] Compiling Linux binary inside WSL (Tauri build)..." -ForegroundColor Yellow
+wsl -d Ubuntu -u root -- bash -c 'source $HOME/.cargo/env && cd /mnt/c/Users/Admin/TelegramRape/TelegramFullOpenCustom && npx @tauri-apps/cli build --no-bundle'
 
 $BinarySource = "$RootDir\target\release\app"
 if (-not (Test-Path $BinarySource)) {

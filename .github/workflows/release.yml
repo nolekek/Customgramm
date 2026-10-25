@@ -34,8 +34,8 @@ jobs:
       - name: Build Web Frontend
         run: npm run build
 
-      - name: Build Windows Binary
-        run: cargo build --release -p app
+      - name: Build Windows Binary via Tauri
+        run: npx @tauri-apps/cli build --no-bundle
 
       - name: Package Windows Archive
         shell: pwsh
@@ -84,8 +84,8 @@ jobs:
       - name: Build Web Frontend
         run: npm run build
 
-      - name: Build Linux Binary
-        run: cargo build --release -p app
+      - name: Build Linux Binary via Tauri
+        run: npx @tauri-apps/cli build --no-bundle
 
       - name: Package Linux Distribution
         run: |

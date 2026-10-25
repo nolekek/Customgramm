@@ -18,9 +18,9 @@ if (-not (Test-Path "$RootDir\.data\tdjson.dll")) {
 Write-Host "[1/4] Building web frontend (Vite)..." -ForegroundColor Yellow
 npm run build
 
-# 2. Build Rust release binary
-Write-Host "[2/4] Compiling OpenCustom Telegram (release)..." -ForegroundColor Yellow
-cargo build --release -p app
+# 2. Build Tauri release binary with embedded assets (never connects to devUrl)
+Write-Host "[2/4] Compiling OpenCustom Telegram via Tauri build (embedded assets)..." -ForegroundColor Yellow
+npx @tauri-apps/cli build --no-bundle
 
 $BinarySource = "$RootDir\target\release\app.exe"
 if (-not (Test-Path $BinarySource)) {

@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.65.0",
     "@tauri-apps/api": "^2.2.0"
   },
   "devDependencies": {
