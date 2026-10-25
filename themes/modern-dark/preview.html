@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Theme Preview - Modern Dark</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; font-family: var(--tg-font-family); }
+    .app-preview-layout {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+    .preview-sidebar {
+      width: 330px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--tg-border);
+    }
+    .preview-chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--tg-bg-primary);
+    }
+    .preview-banner {
+      background: var(--tg-bg-surface);
+      color: var(--tg-text-muted);
+      padding: 10px 18px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--tg-border);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-preview-layout">
+    <!-- Sidebar -->
+    <div class="sidebar preview-sidebar">
+      <div class="preview-banner">
+        <span>⚡ OpenCustom Theme Preview</span>
+        <span style="color: var(--tg-accent);">Modern Dark</span>
+      </div>
+      <div style="padding: 12px 16px;">
+        <input type="text" placeholder="Search..." style="width: 100%; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--tg-border); background: var(--tg-bg-surface); color: var(--tg-text-primary); outline: none;">
+      </div>
+      <div class="chat-list" style="overflow-y: auto; flex: 1;">
+        <div class="chat-row active">
+          <div class="chat-avatar"><span>E</span></div>
+          <div class="chat-info">
+            <div class="chat-top-row">
+              <span class="chat-title">Elena Rostova</span>
+              <span class="chat-time">19:45</span>
+            </div>
+            <div class="chat-bottom-row">
+              <span class="chat-snippet">Let's test the new theme hot-reloading!</span>
+              <span class="badge-unread">1</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-row">
+          <div class="chat-avatar"><span>D</span></div>
+          <div class="chat-info">
+            <div class="chat-top-row">
+              <span class="chat-title">Design Guild</span>
+              <span class="chat-time">18:20</span>
+            </div>
+            <div class="chat-bottom-row">
+              <span class="chat-snippet">Clean typography and smooth rounded corners</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Chat Area -->
+    <div class="preview-chat-area">
+      <!-- Header -->
+      <div class="chat-header-bar">
+        <div class="chat-header-info">
+          <div class="chat-header-avatar">E</div>
+          <div class="chat-header-text">
+            <h2 class="chat-header-title">Elena Rostova</h2>
+            <span class="chat-header-status">last seen recently</span>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="btn-header">✨ AI Summary</button>
+          <button class="btn-header">👻 Ghost Mode</button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages-container">
+        <div class="msg-container msg-incoming">
+          <div class="msg-bubble">
+            <div class="msg-header">
+              <span class="msg-sender">Elena Rostova</span>
+            </div>
+            <div class="msg-content">Welcome to the Modern Dark theme for OpenCustom Telegram!</div>
+            <div class="msg-footer">
+              <span class="msg-time">19:40</span>
+              <span class="msg-status">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg-container msg-outgoing">
+          <div class="msg-bubble">
+            <div class="msg-content">Looks so sleek and comfortable on the eyes. Telegram desktop aesthetics at its best.</div>
+            <div class="msg-footer">
+              <span class="msg-time">19:42</span>
+              <span class="msg-status">✓✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="chat-input-bar">
+        <div class="input-row">
+          <button class="btn-input-tool" title="Attach file">📎</button>
+          <textarea class="chat-textarea" placeholder="Write a message..." rows="1"></textarea>
+          <button class="btn-input-tool" title="AI Assistant">✨</button>
+          <button class="btn-send" title="Send">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

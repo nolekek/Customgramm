@@ -1,0 +1,9 @@
+{
+  "id": "tokyo-night",
+  "name": "Tokyo Night",
+  "author": "Telegram TUI Team & OpenCustom",
+  "version": "1.0.0",
+  "description": "Authentic Tokyo Night palette with deep midnight blues and calm neon highlights",
+  "engine_version": "1.0",
+  "tags": ["dark", "blue", "tokyo-night", "calm"]
+}

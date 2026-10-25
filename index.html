@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenCustom Telegram</title>
+  <style>
+    /* Base Reset and Layout */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #1a1b26;
+      color: #c0caf5;
+    }
+    #app {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+    .sidebar {
+      width: 320px;
+      min-width: 260px;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      background: #16161e;
+      z-index: 10;
+    }
+    .sidebar-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .app-brand {
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ghost-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: rgba(122, 162, 247, 0.15);
+      color: #7aa2f7;
+      cursor: pointer;
+      border: 1px solid rgba(122, 162, 247, 0.3);
+      transition: all 0.2s;
+    }
+    .ghost-pill.active {
+      background: rgba(0, 243, 255, 0.2);
+      color: #00f3ff;
+      border-color: #00f3ff;
+      box-shadow: 0 0 8px rgba(0, 243, 255, 0.3);
+    }
+    .icon-btn {
+      background: transparent;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 6px;
+      border-radius: 6px;
+      opacity: 0.8;
+      transition: all 0.2s;
+    }
+    .icon-btn:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .search-bar {
+      padding: 8px 12px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: inherit;
+      outline: none;
+      font-size: 13px;
+    }
+    .search-input:focus {
+      border-color: #7aa2f7;
+    }
+    .folder-tabs {
+      display: flex;
+      padding: 0 8px 6px 8px;
+      gap: 4px;
+      overflow-x: auto;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .folder-tab {
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      white-space: nowrap;
+    }
+    .folder-tab.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .chat-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+    .chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #1a1b26;
+    }
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+      padding: 40px;
+    }
+    .empty-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 24px 32px;
+      max-width: 440px;
+    }
+    .empty-card h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .empty-card p {
+      font-size: 13px;
+      opacity: 0.7;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+    .theme-quick-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .btn-quick-theme {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: inherit;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .btn-quick-theme:hover {
+      background: rgba(122, 162, 247, 0.2);
+      border-color: #7aa2f7;
+    }
+    .active-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    /* Modal Styles */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal-dialog {
+      background: #1f2335;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      width: 90%;
+      max-width: 580px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalSlide 0.2s ease-out;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-modal {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+    }
+    .btn-primary {
+      background: #7aa2f7;
+      color: #15161e;
+    }
+    .btn-primary:hover {
+      background: #89b4fa;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .dropzone {
+      border: 2px dashed rgba(122, 162, 247, 0.4);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      background: rgba(122, 162, 247, 0.05);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dropzone.dragover {
+      border-color: #7aa2f7;
+      background: rgba(122, 162, 247, 0.15);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.8;
+    }
+    .form-input, .form-select, .form-textarea {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.25);
+      color: inherit;
+      outline: none;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: #7aa2f7;
+    }
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .theme-card {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.03);
+      transition: all 0.2s;
+    }
+    .theme-card:hover {
+      border-color: #7aa2f7;
+      transform: translateY(-2px);
+    }
+    .theme-card.selected {
+      border-color: #7aa2f7;
+      background: rgba(122, 162, 247, 0.1);
+      box-shadow: 0 0 12px rgba(122, 162, 247, 0.3);
+    }
+    .theme-card h4 {
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .theme-card p {
+      font-size: 11px;
+      opacity: 0.6;
+      line-height: 1.3;
+    }
+    @keyframes modalSlide {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="app-brand">
+          <span>⚡</span>
+          <span>OpenCustom</span>
+        </div>
+        <div class="header-actions">
+          <div id="ghost-pill" class="ghost-pill active" title="Ghost Mode: Active">👻 GHOST</div>
+          <button id="btn-open-ai" class="icon-btn" title="AI Assistant">✨</button>
+          <button id="btn-open-themes" class="icon-btn" title="Theme Manager">🎨</button>
+          <button id="btn-auth-status" class="icon-btn" title="Account / Login">👤</button>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <input id="chat-search" class="search-input" type="text" placeholder="Search chats...">
+      </div>
+
+      <div class="folder-tabs">
+        <button class="folder-tab active" data-folder="all">Все</button>
+        <button class="folder-tab" data-folder="private">Личные</button>
+        <button class="folder-tab" data-folder="groups">Группы</button>
+        <button class="folder-tab" data-folder="channels">Каналы</button>
+      </div>
+
+      <div id="chat-list" class="chat-list">
+        <!-- Rendered dynamically by ThemeEngine via chat_item.html -->
+      </div>
+    </div>
+
+    <!-- Main Chat Pane -->
+    <div class="chat-area">
+      <!-- Empty State -->
+      <div id="empty-chat-placeholder" class="empty-state">
+        <div class="empty-card">
+          <h3>OpenCustom Telegram</h3>
+          <p>Fully customizable Telegram desktop client powered by native TDLib, HTML/CSS themes, and AI styling.</p>
+          <p>Drag & drop any theme <code>.zip</code> file onto the screen to apply it instantly, or switch below:</p>
+          <div class="theme-quick-buttons">
+            <button class="btn-quick-theme" data-theme-id="tokyo-night">Tokyo Night</button>
+            <button class="btn-quick-theme" data-theme-id="modern-dark">Modern Dark</button>
+            <button class="btn-quick-theme" data-theme-id="cyberpunk-glass">Cyberpunk Glass</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Chat Interface -->
+      <div id="active-chat-container" class="active-chat" style="display: none;">
+        <div id="chat-header-container">
+          <!-- Rendered dynamically by ThemeEngine via header.html -->
+        </div>
+        <div id="messages-container" class="messages-container">
+          <!-- Rendered dynamically by ThemeEngine via message.html -->
+        </div>
+        <div id="chat-input-container">
+          <!-- Rendered dynamically by ThemeEngine via input.html -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Theme Manager & Live Editor Modal -->
+  <div id="theme-modal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">🎨 Theme Manager & Live Hot-Reload</h3>
+        <button class="icon-btn btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Available Themes</label>
+          <div id="theme-grid" class="theme-grid">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div id="theme-dropzone" class="dropzone">
+          <p>📦 <strong>Drag & Drop theme .zip archive here</strong></p>
+          <span style="font-size: 11px; opacity: 0.6;">Instantly imports theme and hot-reloads interface</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Live CSS & Template Editor</label>
+          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+            <select id="editor-file-select" class="form-select" style="flex: 1;">
+              <option value="style.css">style.css</option>
+              <option value="templates/message.html">templates/message.html</option>
+              <option value="templates/chat_item.html">templates/chat_item.html</option>
+              <option value="templates/header.html">templates/header.html</option>
+              <option value="templates/input.html">templates/input.html</option>
+            </select>
+            <button id="btn-save-editor" class="btn-modal btn-primary">Apply & Save</button>
+          </div>
+          <textarea id="live-code-editor" class="form-textarea" rows="8" spellcheck="false" style="font-family: monospace; font-size: 12px;"></textarea>
+        </div>
+
+        <button id="btn-copy-ai-prompt" class="btn-modal btn-secondary" style="width: 100%;">📋 Copy AI Prompt Guide (AI_THEME_PROMPT.md)</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal btn-secondary btn-close-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Assistant Modal -->
+  <div id="ai-modal" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">✨ AI Assistant (User API)</h3>
+        <button class="icon-btn btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">AI Provider</label>
+          <select id="ai-provider" class="form-select">
+            <option value="openai">OpenAI / Groq / DeepSeek / Local Ollama (OpenAI-compatible)</option>
+            <option value="gemini">Google Gemini API</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <input id="ai-api-key" type="password" class="form-input" placeholder="Enter your API key...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model Name</label>
+          <input id="ai-model" type="text" class="form-input" placeholder="e.g. gpt-4o, gemini-1.5-flash, llama3">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Actions</label>
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-ai-summarize" class="btn-modal btn-secondary" style="flex: 1;">📝 Summarize Chat</button>
+            <button id="btn-ai-translate" class="btn-modal btn-secondary" style="flex: 1;">🌐 Translate</button>
+            <button id="btn-ai-reply" class="btn-modal btn-primary" style="flex: 1;">✍️ Draft Reply</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Result</label>
+          <textarea id="ai-result-box" class="form-textarea" rows="6" readonly placeholder="AI result will appear here..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-ai-copy-result" class="btn-modal btn-primary">Copy Result</button>
+        <button class="btn-modal btn-secondary btn-close-modal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ghost Mode Settings Modal -->
+  <div id="ghost-modal" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title">👻 Ghost Mode (Privacy Settings)</h3>
+        <button class="icon-btn btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; opacity: 0.75; line-height: 1.4;">
+          Ghost Mode ensures you can browse Telegram without alerting others or leaving trace markers.
+        </p>
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px;">
+          <div>
+            <div style="font-weight: 600; font-size: 13px;">Suppress Read Receipts</div>
+            <div style="font-size: 11px; opacity: 0.6;">Never send read checkmarks when opening chats</div>
+          </div>
+          <input type="checkbox" id="chk-ghost-read" checked style="width: 18px; height: 18px; cursor: pointer;">
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: rgba(255,255,255,0.04); border-radius: 8px;">
+          <div>
+            <div style="font-weight: 600; font-size: 13px;">Hide Typing Indicators</div>
+            <div style="font-size: 11px; opacity: 0.6;">Do not broadcast "typing..." status while composing</div>
+          </div>
+          <input type="checkbox" id="chk-ghost-typing" checked style="width: 18px; height: 18px; cursor: pointer;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-ghost" class="btn-modal btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="auth-modal" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Telegram Authentication</h3>
+        <button class="icon-btn btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Phone Step -->
+        <div id="auth-step-phone" class="form-group">
+          <label class="form-label">Phone Number (International format)</label>
+          <input id="auth-phone-input" type="text" class="form-input" placeholder="+1234567890">
+          <button id="btn-submit-phone" class="btn-modal btn-primary" style="margin-top: 8px;">Send Code</button>
+          <button id="btn-request-qr" class="btn-modal btn-secondary" style="margin-top: 4px;">Log in via QR Code</button>
+        </div>
+
+        <!-- Code Step -->
+        <div id="auth-step-code" class="form-group" style="display: none;">
+          <label class="form-label">Verification Code</label>
+          <input id="auth-code-input" type="text" class="form-input" placeholder="12345">
+          <button id="btn-submit-code" class="btn-modal btn-primary" style="margin-top: 8px;">Verify Code</button>
+        </div>
+
+        <!-- Password Step -->
+        <div id="auth-step-password" class="form-group" style="display: none;">
+          <label class="form-label">2FA Cloud Password</label>
+          <input id="auth-password-input" type="password" class="form-input" placeholder="Your 2FA password">
+          <button id="btn-submit-password" class="btn-modal btn-primary" style="margin-top: 8px;">Submit Password</button>
+        </div>
+
+        <!-- QR Code Step -->
+        <div id="auth-step-qr" class="form-group" style="display: none; text-align: center;">
+          <p style="font-size: 13px; margin-bottom: 12px;">Scan with your Telegram Mobile App</p>
+          <div id="qr-container" style="background: white; padding: 16px; border-radius: 8px; display: inline-block;"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal btn-secondary btn-close-modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

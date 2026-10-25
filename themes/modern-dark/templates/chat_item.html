@@ -1,0 +1,15 @@
+<div class="chat-row {{active_class}}" data-chat-id="{{id}}" data-action="select-chat">
+  <div class="chat-avatar">
+    <span>{{avatar_letter}}</span>
+  </div>
+  <div class="chat-info">
+    <div class="chat-top-row">
+      <span class="chat-title">{{title}}</span>
+      <span class="chat-time">{{time}}</span>
+    </div>
+    <div class="chat-bottom-row">
+      <span class="chat-snippet">{{last_message}}</span>
+      {{unread_badge_html}}
+    </div>
+  </div>
+</div>

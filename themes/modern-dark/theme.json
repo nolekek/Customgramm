@@ -1,0 +1,9 @@
+{
+  "id": "modern-dark",
+  "name": "Modern Telegram Dark",
+  "author": "OpenCustom Team",
+  "version": "1.0.0",
+  "description": "Ergonomic modern dark theme inspired by Telegram Desktop with smooth rounded corners and clean typography",
+  "engine_version": "1.0",
+  "tags": ["dark", "modern", "ergonomic", "telegram"]
+}

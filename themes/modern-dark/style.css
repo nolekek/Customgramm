@@ -1,0 +1,336 @@
+:root {
+  --tg-bg-primary: #0f0f0f;
+  --tg-bg-secondary: #1a1a1a;
+  --tg-bg-surface: #262626;
+  --tg-bg-hover: #2f2f2f;
+  --tg-bg-active: #333333;
+
+  --tg-text-primary: #ffffff;
+  --tg-text-secondary: #8774e1;
+  --tg-text-muted: #8e8e93;
+
+  --tg-accent: #8774e1;
+  --tg-accent-hover: #9c8be8;
+  --tg-accent-text: #ffffff;
+
+  --tg-bubble-out-bg: #8774e1;
+  --tg-bubble-out-text: #ffffff;
+  --tg-bubble-in-bg: #212121;
+  --tg-bubble-in-text: #ffffff;
+  --tg-bubble-radius: 16px;
+
+  --tg-border: #262626;
+  --tg-border-active: #8774e1;
+  --tg-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+
+  --tg-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  --tg-font-size-base: 14px;
+}
+
+body {
+  background-color: var(--tg-bg-primary);
+  color: var(--tg-text-primary);
+  font-family: var(--tg-font-family);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.sidebar {
+  background-color: var(--tg-bg-secondary);
+  border-right: 1px solid var(--tg-border);
+}
+
+.chat-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-radius: 12px;
+  margin: 3px 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.chat-row:hover {
+  background-color: var(--tg-bg-hover);
+}
+
+.chat-row.active {
+  background-color: var(--tg-bg-active);
+}
+
+.chat-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8774e1, #5352ed);
+  color: #ffffff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.chat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-top-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.chat-title {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tg-text-primary);
+}
+
+.chat-time {
+  font-size: 12px;
+  color: var(--tg-text-muted);
+}
+
+.chat-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-snippet {
+  font-size: 13px;
+  color: var(--tg-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge-unread {
+  background-color: var(--tg-accent);
+  color: var(--tg-accent-text);
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.chat-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--tg-border);
+  background-color: var(--tg-bg-secondary);
+}
+
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8774e1, #5352ed);
+  color: #ffffff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-header-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.chat-header-status {
+  font-size: 12px;
+  color: var(--tg-text-muted);
+}
+
+.chat-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-header {
+  background: var(--tg-bg-surface);
+  color: var(--tg-text-primary);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.btn-header:hover {
+  background: var(--tg-bg-hover);
+  color: var(--tg-accent);
+}
+
+.messages-container {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 32px;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.msg-container {
+  display: flex;
+  margin-bottom: 6px;
+  animation: fadeIn 0.2s ease;
+}
+
+.msg-incoming {
+  justify-content: flex-start;
+}
+
+.msg-outgoing {
+  justify-content: flex-end;
+}
+
+.msg-bubble {
+  max-width: 60%;
+  padding: 10px 16px;
+  border-radius: var(--tg-bubble-radius);
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  word-wrap: break-word;
+}
+
+.msg-incoming .msg-bubble {
+  background-color: var(--tg-bubble-in-bg);
+  color: var(--tg-bubble-in-text);
+  border-bottom-left-radius: 4px;
+}
+
+.msg-outgoing .msg-bubble {
+  background-color: var(--tg-bubble-out-bg);
+  color: var(--tg-bubble-out-text);
+  border-bottom-right-radius: 4px;
+}
+
+.msg-sender {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tg-accent);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.msg-outgoing .msg-sender {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.msg-content {
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.msg-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.msg-actions {
+  display: none;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.msg-bubble:hover .msg-actions {
+  display: inline-flex;
+}
+
+.msg-btn {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px 5px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+.msg-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.chat-input-bar {
+  padding: 14px 24px;
+  background-color: var(--tg-bg-secondary);
+  border-top: 1px solid var(--tg-border);
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--tg-bg-surface);
+  border-radius: 16px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+
+.input-row:focus-within {
+  border-color: var(--tg-accent);
+}
+
+.chat-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--tg-text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  resize: none;
+  max-height: 140px;
+}
+
+.btn-send, .btn-input-tool {
+  background: transparent;
+  border: none;
+  color: var(--tg-text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.btn-input-tool:hover {
+  color: var(--tg-accent);
+  background: var(--tg-bg-hover);
+}
+
+.btn-send {
+  color: var(--tg-accent);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}

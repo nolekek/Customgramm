@@ -1,0 +1,9 @@
+{
+  "id": "cyberpunk-glass",
+  "name": "Cyberpunk Glass HUD",
+  "author": "OpenCustom Team",
+  "version": "1.0.0",
+  "description": "Showcase of deep template customization with futuristic sci-fi HUD styling, glassmorphism blur, angled corners, and neon glow accents",
+  "engine_version": "1.0",
+  "tags": ["cyberpunk", "glassmorphism", "neon", "deep-customization", "futuristic"]
+}

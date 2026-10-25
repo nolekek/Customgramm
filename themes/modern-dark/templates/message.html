@@ -1,0 +1,18 @@
+<div class="msg-container msg-{{direction}}" data-msg-id="{{id}}">
+  <div class="msg-bubble">
+    {{reply_preview}}
+    <div class="msg-header">
+      <span class="msg-sender">{{sender}}</span>
+    </div>
+    {{media_html}}
+    <div class="msg-content">{{text}}</div>
+    <div class="msg-footer">
+      <span class="msg-time">{{time}}</span>
+      <span class="msg-status">{{status_icon}}</span>
+      <div class="msg-actions">
+        <button class="msg-btn" data-action="reply" title="Reply">↩</button>
+        <button class="msg-btn" data-action="ai-translate" title="Translate">🌐</button>
+      </div>
+    </div>
+  </div>
+</div>

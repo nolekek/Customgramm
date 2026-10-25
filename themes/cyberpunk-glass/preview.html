@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Theme Preview - Cyberpunk Glass HUD</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; padding: 0; font-family: var(--tg-font-family); }
+    .app-preview-layout {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+    .preview-sidebar {
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+    }
+    .preview-chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .preview-banner {
+      background: rgba(0, 243, 255, 0.08);
+      color: var(--tg-accent);
+      padding: 10px 18px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--tg-border);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-preview-layout">
+    <!-- Sidebar -->
+    <div class="sidebar preview-sidebar">
+      <div class="preview-banner">
+        <span>// NEURAL_LINK_HUD</span>
+        <span style="color: var(--tg-neon-pink);">CYBERPUNK_v1.0</span>
+      </div>
+      <div style="padding: 12px 14px;">
+        <input type="text" placeholder="&gt; SEARCH NODES..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--tg-border); background: rgba(5, 10, 25, 0.7); color: var(--tg-accent); outline: none; font-family: inherit;">
+      </div>
+      <div class="chat-list" style="overflow-y: auto; flex: 1;">
+        <div class="chat-row active">
+          <div class="chat-avatar"><span>N</span></div>
+          <div class="chat-info">
+            <div class="chat-top-row">
+              <span class="chat-title">&gt; Neo Cortex</span>
+              <span class="chat-time">23:59</span>
+            </div>
+            <div class="chat-bottom-row">
+              <span class="chat-snippet">Quantum encryption tunnel stabilized</span>
+              <span class="badge-unread">!</span>
+            </div>
+          </div>
+        </div>
+        <div class="chat-row">
+          <div class="chat-avatar"><span>Z</span></div>
+          <div class="chat-info">
+            <div class="chat-top-row">
+              <span class="chat-title">&gt; Zion Broadcast</span>
+              <span class="chat-time">22:15</span>
+            </div>
+            <div class="chat-bottom-row">
+              <span class="chat-snippet">Incoming encrypted neural feed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Chat Area -->
+    <div class="preview-chat-area">
+      <!-- Header -->
+      <div class="chat-header-bar">
+        <div class="chat-header-info">
+          <div class="chat-header-avatar">N</div>
+          <div class="chat-header-text">
+            <h2 class="chat-header-title">Neo Cortex</h2>
+            <span class="chat-header-status">[LINK_ACTIVE: GHOST_PROTOCOL_ENGAGED]</span>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="btn-header">// SUMMARIZE</button>
+          <button class="btn-header">// GHOST_MODE</button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages-container">
+        <div class="msg-container msg-incoming">
+          <div class="msg-hud-card">
+            <div class="msg-hud-header">
+              <span class="msg-sender">#Neo Cortex</span>
+              <span class="msg-hud-tag">//NODE_SEC_7</span>
+            </div>
+            <div class="msg-content">Wake up, agent. The neural-styled Telegram client is fully operational.</div>
+            <div class="msg-hud-footer">
+              <span class="msg-time">23:58</span>
+              <span class="msg-status">✓</span>
+              <div class="msg-actions">
+                <button class="msg-btn">REPLY</button>
+                <button class="msg-btn">AI_TR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg-container msg-outgoing">
+          <div class="msg-hud-card">
+            <div class="msg-hud-header">
+              <span class="msg-sender">#OPERATOR</span>
+              <span class="msg-hud-tag">//TRANSMIT</span>
+            </div>
+            <div class="msg-content">Deep template customization online. Glassmorphism HUD active.</div>
+            <div class="msg-hud-footer">
+              <span class="msg-time">23:59</span>
+              <span class="msg-status">✓✓</span>
+              <div class="msg-actions">
+                <button class="msg-btn">REPLY</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Bar -->
+      <div class="chat-input-bar">
+        <div class="input-row">
+          <button class="btn-input-tool">&lt;FILE&gt;</button>
+          <textarea class="chat-textarea" placeholder="&gt; TRANSMIT PAYLOAD..." rows="1"></textarea>
+          <button class="btn-input-tool">&lt;AI&gt;</button>
+          <button class="btn-send">&gt;&gt;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

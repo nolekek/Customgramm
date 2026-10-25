@@ -1,0 +1,13 @@
+/target/
+/src-tauri/target/
+node_modules/
+dist/
+*.log
+.data/
+crates/*/.data/
+*.zip
+*.tar.gz
+
+.idea/
+.vscode/
+*.swp
