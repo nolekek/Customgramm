@@ -8,6 +8,12 @@ Write-Host "=================================================" -ForegroundColor 
 $RootDir = (Get-Item "$PSScriptRoot\..").FullName
 Set-Location $RootDir
 
+# 0. Ensure TDLib binaries exist
+if (-not (Test-Path "$RootDir\.data\tdjson.dll")) {
+    Write-Host "[0/4] Fetching Windows TDLib binaries via fetch-tdlib..." -ForegroundColor Yellow
+    cargo run -p fetch-tdlib -- windows
+}
+
 # 1. Build frontend
 Write-Host "[1/4] Building web frontend (Vite)..." -ForegroundColor Yellow
 npm run build

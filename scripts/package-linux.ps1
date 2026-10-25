@@ -8,6 +8,34 @@ Write-Host "=================================================" -ForegroundColor 
 $RootDir = (Get-Item "$PSScriptRoot\..").FullName
 Set-Location $RootDir
 
+# 0. Ensure TDLib binaries exist
+if (-not (Test-Path "$RootDir\.data\libtdjson.so")) {
+    Write-Host "[0/5] Fetching Linux TDLib binary via fetch-tdlib..." -ForegroundColor Yellow
+    cargo run -p fetch-tdlib -- linux
+}
+
+# 1. Build frontend on host (creates dist/index.html)
+Write-Host "[1/5] Ensuring web frontend is built..." -ForegroundColor Yellow
+npm run build
+
+# 2. Check and ensure Rust toolchain inside WSL
+Write-Host "[2/5] Ensuring Rust toolchain inside WSL Ubuntu..." -ForegroundColor Yellow
+$RustCheck = wsl -d Ubuntu -u root -- bash -c 'source $HOME/.cargo/env 2>/dev/null; which cargo'
+if (-not $RustCheck) {
+    Write-Host "Installing Rust in WSL..." -ForegroundColor Yellow
+    wsl -d Ubuntu -u root -- bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
+}
+
+# 3. Compile Linux release binary inside WSL
+Write-Host "[3/5] Compiling Linux binary inside WSL..." -ForegroundColor Yellow
+wsl -d Ubuntu -u root -- bash -c 'source $HOME/.cargo/env && cd /mnt/c/Users/Admin/TelegramRape/TelegramFullOpenCustom && cargo build --release -p app'
+
+$BinarySource = "$RootDir\target\release\app"
+if (-not (Test-Path $BinarySource)) {
+    throw "Build failed: $BinarySource does not exist."
+}
+
+# 4. Assemble distribution folder
 $ReleasesDir = "$RootDir\releases"
 $DistDir = "$ReleasesDir\OpenCustomTelegram-linux-x64"
 Write-Host "Assembling Linux release in $DistDir..." -ForegroundColor Yellow
@@ -16,11 +44,6 @@ if (Test-Path $DistDir) {
     Remove-Item -Recurse -Force $DistDir
 }
 New-Item -ItemType Directory -Force -Path $DistDir | Out-Null
-
-$BinarySource = "$RootDir\target\release\app"
-if (-not (Test-Path $BinarySource)) {
-    throw "Build failed: $BinarySource does not exist."
-}
 
 Copy-Item $BinarySource -Destination "$DistDir\OpenCustomTelegram"
 Copy-Item "$RootDir\.data\libtdjson.so" -Destination "$DistDir\"
@@ -62,7 +85,8 @@ All dependencies (TDLib libtdjson.so) are bundled in this folder.
 '@
 [System.IO.File]::WriteAllText("$DistDir\README.txt", $Readme.Replace("`r`n", "`n"))
 
-Write-Host "Creating releases\OpenCustomTelegram-linux-x64.tar.gz..." -ForegroundColor Yellow
+# 5. Create tar.gz archive
+Write-Host "[5/5] Creating releases\OpenCustomTelegram-linux-x64.tar.gz..." -ForegroundColor Yellow
 wsl -d Ubuntu -u root -- bash -c "cd /mnt/c/Users/Admin/TelegramRape/TelegramFullOpenCustom/releases && chmod +x OpenCustomTelegram-linux-x64/OpenCustomTelegram OpenCustomTelegram-linux-x64/run.sh && tar -czf OpenCustomTelegram-linux-x64.tar.gz OpenCustomTelegram-linux-x64"
 
 $TarGz = "$ReleasesDir\OpenCustomTelegram-linux-x64.tar.gz"
