@@ -563,7 +563,7 @@ pub fn run() {
             let themes_dir = resolve_themes_directory();
 
             tauri::async_runtime::block_on(async move {
-                match Engine::start(config).await {
+                match Engine::start(config.clone()).await {
                     Ok((handle, mut rx)) => {
                         let app_state = AppState {
                             handle: handle.clone(),
@@ -580,7 +580,27 @@ pub fn run() {
                         });
                     }
                     Err(e) => {
-                        eprintln!("Failed to initialize Telegram Engine: {}", e);
+                        eprintln!(
+                            "Failed to initialize Telegram Engine: {}. Starting in safe mock fallback mode.",
+                            e
+                        );
+                        let mut fallback_config = config;
+                        fallback_config.use_mock = true;
+                        if let Ok((handle, mut rx)) = Engine::start(fallback_config).await {
+                            let app_state = AppState {
+                                handle: handle.clone(),
+                                ghost: RwLock::new(GhostSettings::default()),
+                                themes_dir,
+                            };
+                            app_handle.manage(app_state);
+
+                            let emitter = app_handle.clone();
+                            tauri::async_runtime::spawn(async move {
+                                while let Ok(event) = rx.recv().await {
+                                    let _ = emitter.emit("tg://event", &event);
+                                }
+                            });
+                        }
                     }
                 }
             });

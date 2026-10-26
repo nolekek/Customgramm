@@ -156,6 +156,12 @@ jobs:
       - name: Build Web Frontend
         run: npm run build
 
+      - name: Fetch TDLib for Android arm64
+        run: |
+          mkdir -p src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a
+          curl -sSL https://github.com/up9cloud/android-libtdjson/releases/download/v1.8.65/jniLibs.tar.gz | tar -xz -C /tmp/
+          cp /tmp/jniLibs/arm64-v8a/libtdjson.so src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/libtdjson.so
+
       - name: Build and Sign Android APK
         run: |
           cargo build --target aarch64-linux-android --release

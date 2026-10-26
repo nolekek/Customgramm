@@ -815,6 +815,27 @@ class OpenCustomApp {
   // -------------------------------------------------------------------------
   // 7. Chat Selection & Active Chat
   // -------------------------------------------------------------------------
+  public closeActiveChat() {
+    if (this.activeChatId !== null) {
+      const prevId = this.activeChatId;
+      api.closeChat(prevId).catch((err) => console.warn('closeChat failed:', err));
+      this.activeChatId = null;
+    }
+    this.replyingToMsg = null;
+    this.editingMsg = null;
+    this.hasReachedHistoryEnd = false;
+    this.isLoadingHistory = false;
+    this.isPaginating = false;
+
+    document.getElementById('app')?.classList.remove('has-active-chat');
+    const emptyEl = document.getElementById('empty-chat-placeholder');
+    const activeEl = document.getElementById('active-chat-container');
+    if (emptyEl) emptyEl.style.display = 'flex';
+    if (activeEl) activeEl.style.display = 'none';
+
+    this.renderChatList();
+  }
+
   private async selectChat(chatId: number) {
     const prevChatId = this.activeChatId;
     if (prevChatId !== null && prevChatId !== chatId) {
@@ -827,6 +848,13 @@ class OpenCustomApp {
     this.hasReachedHistoryEnd = false;
     this.isLoadingHistory = false;
     this.isPaginating = false;
+
+    document.getElementById('app')?.classList.add('has-active-chat');
+    try {
+      window.history.pushState({ chatId }, '');
+    } catch {
+      // Ignored in non-browser environments
+    }
 
     document.getElementById('empty-chat-placeholder')!.style.display = 'none';
     document.getElementById('active-chat-container')!.style.display = 'flex';
@@ -995,10 +1023,15 @@ class OpenCustomApp {
       photo_path: avatarData.photoPath,
       icon_sparkles: `<span class="svg-icon" style="width:14px;height:14px;">${icons.sparkles}</span>`,
       icon_ghost: `<span class="svg-icon" style="width:14px;height:14px;">${icons.ghost}</span>`,
+      icon_back: `<span class="svg-icon" style="width:20px;height:20px;">${icons.arrowLeft}</span>`,
     };
 
     headerEl.innerHTML = themeEngine.renderTemplate('header.html', tokens);
 
+    headerEl.querySelector('#btn-mobile-back')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeActiveChat();
+    });
     headerEl.querySelector('[data-action="ai-summarize-chat"]')?.addEventListener('click', () => {
       this.openAiModal('summarize');
     });
@@ -1743,6 +1776,18 @@ class OpenCustomApp {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.modal-backdrop').forEach((m) => m.classList.remove('open'));
       });
+    });
+
+    // Mobile & Android Back Navigation
+    window.addEventListener('popstate', () => {
+      const openModal = document.querySelector('.modal-backdrop.open');
+      if (openModal) {
+        openModal.classList.remove('open');
+        return;
+      }
+      if (this.activeChatId !== null) {
+        this.closeActiveChat();
+      }
     });
 
     // Theme Live Editor

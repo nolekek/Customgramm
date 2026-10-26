@@ -47,6 +47,15 @@ if (-not (Test-Path $JniDir)) {
 }
 Copy-Item "$RootDir\target\aarch64-linux-android\release\libapp_lib.so" -Destination "$JniDir\libapp_lib.so" -Force
 
+if (-not (Test-Path "$JniDir\libtdjson.so")) {
+    Write-Host "Fetching Android TDLib arm64-v8a binary..." -ForegroundColor Yellow
+    $TdJsonUrl = "https://github.com/up9cloud/android-libtdjson/releases/download/v1.8.65/jniLibs.tar.gz"
+    $TempTar = "$env:TEMP\android_jniLibs.tar.gz"
+    Invoke-WebRequest -Uri $TdJsonUrl -OutFile $TempTar
+    python -c "import tarfile; tf = tarfile.open(r'$TempTar', 'r:gz'); tf.extract('jniLibs/arm64-v8a/libtdjson.so', r'$env:TEMP')"
+    Copy-Item "$env:TEMP\jniLibs\arm64-v8a\libtdjson.so" -Destination "$JniDir\libtdjson.so" -Force
+}
+
 # 3. Assemble Release APK via Gradle
 Write-Host "[3/4] Assembling Release APK via Gradle..." -ForegroundColor Yellow
 Set-Location "$RootDir\src-tauri\gen\android"

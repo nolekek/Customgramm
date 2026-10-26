@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#1a1b26">
   <title>OpenCustom Telegram</title>
   <style>
     /* -----------------------------------------------------------------------
@@ -41,10 +44,12 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     html, body {
       height: 100%;
+      height: 100dvh;
       width: 100%;
       overflow: hidden;
       font-family: var(--tg-font-family);
@@ -53,6 +58,10 @@
       color: var(--tg-text-primary);
       user-select: none;
       -webkit-user-select: none;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
     }
 
     /* SVG Icon Helpers */
@@ -1117,9 +1126,153 @@
       color: #f7768e;
     }
 
+    .btn-mobile-back {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--tg-text-primary);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+      margin-right: 6px;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .btn-mobile-back:hover, .btn-mobile-back:active {
+      background: var(--tg-bg-hover);
+    }
+
     @keyframes modalSlide {
       from { opacity: 0; transform: scale(0.96); }
       to { opacity: 1; transform: scale(1); }
+    }
+
+    /* -----------------------------------------------------------------------
+       Responsive Mobile & Android Layout
+       ----------------------------------------------------------------------- */
+    @media (max-width: 768px) {
+      #app {
+        width: 100vw;
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* On mobile, if no active chat: sidebar takes full screen */
+      #app:not(.has-active-chat) .sidebar {
+        display: flex !important;
+        width: 100vw !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        border-right: none;
+      }
+      #app:not(.has-active-chat) .chat-area {
+        display: none !important;
+      }
+
+      /* On mobile, when a chat is open: sidebar hidden, chat area takes full screen */
+      #app.has-active-chat .sidebar {
+        display: none !important;
+      }
+      #app.has-active-chat .chat-area {
+        display: flex !important;
+        width: 100vw !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        flex: 1;
+      }
+
+      .btn-mobile-back {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        margin-right: 6px;
+        padding: 6px;
+        cursor: pointer;
+      }
+
+      .chat-header-bar {
+        padding: 8px 12px;
+      }
+
+      .chat-header-actions .btn-header span {
+        display: none;
+      }
+      .chat-header-actions .btn-header {
+        padding: 6px 8px;
+      }
+
+      .sidebar-header {
+        padding: 10px 12px;
+      }
+      .app-brand {
+        font-size: 13.5px;
+      }
+      .app-brand-badge {
+        display: none;
+      }
+      .ghost-pill span:last-child {
+        display: none;
+      }
+      .ghost-pill {
+        padding: 5px 8px;
+      }
+
+      /* Modals on mobile */
+      .modal-dialog {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 90vh !important;
+        max-height: 90dvh !important;
+        border-radius: 12px;
+      }
+
+      .settings-dialog {
+        height: 85vh !important;
+        height: 85dvh !important;
+      }
+
+      .settings-layout {
+        flex-direction: column !important;
+        height: calc(100% - 50px) !important;
+      }
+
+      .settings-sidebar {
+        width: 100% !important;
+        min-width: 100% !important;
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--tg-border) !important;
+        padding: 4px 6px !important;
+        gap: 4px !important;
+      }
+
+      .settings-nav-item {
+        white-space: nowrap !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+      }
+
+      .settings-content {
+        padding: 12px !important;
+      }
+
+      .input-bar {
+        padding: 8px 12px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom, 10px));
+      }
+
+      .message-bubble {
+        max-width: 86% !important;
+      }
+
+      .folder-tabs {
+        padding: 0 8px 6px;
+      }
     }
   </style>
 </head>

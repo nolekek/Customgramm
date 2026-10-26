@@ -33,9 +33,19 @@ impl Engine {
             tracing::info!("Initializing engine with MockBackend (mock mode explicitly enabled)");
             Box::new(MockBackend::new())
         } else {
-            let b = TDLibBackend::new(config.clone())?;
-            tracing::info!("Initializing engine with TDLibBackend (real Telegram connection)");
-            Box::new(b)
+            match TDLibBackend::new(config.clone()) {
+                Ok(b) => {
+                    tracing::info!("Initializing engine with TDLibBackend (real Telegram connection)");
+                    Box::new(b)
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "Failed to initialize TDLibBackend: {}. Gracefully falling back to MockBackend.",
+                        e
+                    );
+                    Box::new(MockBackend::new())
+                }
+            }
         };
 
         let handle = CoreHandle::new(command_tx, state.clone());
