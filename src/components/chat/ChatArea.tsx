@@ -1,12 +1,40 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useTelegramStore } from "../../store/telegramStore";
+import { useTelegramStore, MessageItem } from "../../store/telegramStore";
 import { EntityParser } from "./EntityParser";
-import { Send, Paperclip, Smile, MoreVertical, Search, CheckCheck, FileText, Mic, Image as ImageIcon } from "lucide-react";
+import {
+  Send,
+  Paperclip,
+  Smile,
+  MoreVertical,
+  Search,
+  Check,
+  CheckCheck,
+  FileText,
+  Mic,
+  Image as ImageIcon,
+  Reply,
+  Edit2,
+  Trash2,
+  X,
+} from "lucide-react";
 
 export const ChatArea: React.FC = () => {
-  const { chats, selectedChatId, messages, sendMessage } = useTelegramStore();
+  const {
+    chats,
+    selectedChatId,
+    messages,
+    sendMessage,
+    replyingTo,
+    setReplyingTo,
+    editingMessage,
+    setEditingMessage,
+    editMessageText,
+    deleteMessage,
+  } = useTelegramStore();
+
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const activeChat = selectedChatId ? chats[selectedChatId] : null;
   const chatMessages = selectedChatId ? messages[selectedChatId] || [] : [];
@@ -19,13 +47,27 @@ export const ChatArea: React.FC = () => {
     scrollToBottom();
   }, [chatMessages.length]);
 
+  // When edit mode is entered, load message text into input
+  useEffect(() => {
+    if (editingMessage) {
+      const text = editingMessage.content.text?.text || "";
+      setInputText(text);
+      inputRef.current?.focus();
+    }
+  }, [editingMessage]);
+
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputText.trim() || !selectedChatId) return;
 
     const text = inputText;
     setInputText("");
-    await sendMessage(selectedChatId, text);
+
+    if (editingMessage) {
+      await editMessageText(selectedChatId, editingMessage.id, text);
+    } else {
+      await sendMessage(selectedChatId, text);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -39,6 +81,14 @@ export const ChatArea: React.FC = () => {
     return new Date(date * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  const getMessageSnippet = (msg: MessageItem) => {
+    if (msg.content.text?.text) return msg.content.text.text;
+    if (msg.content["@type"] === "messagePhoto") return "📷 Photo";
+    if (msg.content["@type"] === "messageVoiceNote") return "🎤 Voice message";
+    if (msg.content["@type"] === "messageDocument") return "📁 Document";
+    return "Message";
+  };
+
   if (!activeChat) {
     return (
       <div className="flex-1 h-full flex flex-col items-center justify-center bg-[var(--bg-primary)] text-[var(--text-muted)] select-none">
@@ -49,6 +99,8 @@ export const ChatArea: React.FC = () => {
       </div>
     );
   }
+
+  const lastReadOutbox = activeChat.last_read_outbox_message_id || 0;
 
   return (
     <div
@@ -98,13 +150,50 @@ export const ChatArea: React.FC = () => {
             const isOutgoing = msg.is_outgoing;
             const content = msg.content;
             const type = content["@type"];
+            const isRead = isOutgoing && msg.id <= lastReadOutbox;
 
             return (
               <div
                 key={msg.id}
                 data-role="message-row"
-                className={`flex w-full ${isOutgoing ? "justify-end" : "justify-start"}`}
+                className={`flex w-full group ${isOutgoing ? "justify-end" : "justify-start"}`}
               >
+                {/* Actions Menu (hover) */}
+                <div
+                  className={`opacity-0 group-hover:opacity-100 flex items-center gap-1 px-1 transition-opacity self-center ${
+                    isOutgoing ? "order-first mr-1" : "order-last ml-1"
+                  }`}
+                >
+                  <button
+                    onClick={() => setReplyingTo(msg)}
+                    className="p-1.5 rounded-full hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    title="Reply"
+                  >
+                    <Reply size={13} />
+                  </button>
+                  {isOutgoing && (
+                    <>
+                      {type === "messageText" && (
+                        <button
+                          onClick={() => setEditingMessage(msg)}
+                          className="p-1.5 rounded-full hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                          title="Edit"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteMessage(activeChat.id, msg.id)}
+                        className="p-1.5 rounded-full hover:bg-red-500/20 text-[var(--text-muted)] hover:text-red-400"
+                        title="Delete"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Message Bubble */}
                 <div
                   data-role="message-bubble"
                   data-outgoing={isOutgoing ? "true" : "false"}
@@ -114,6 +203,15 @@ export const ChatArea: React.FC = () => {
                       : "bg-[var(--bubble-in-bg)] text-[var(--bubble-in-text)] rounded-bl-none border border-[var(--border-subtle)]"
                   }`}
                 >
+                  {/* Reply Reference Quote */}
+                  {msg.reply_to && msg.reply_to.message_id && (
+                    <div className="border-l-2 border-[var(--accent-primary)] pl-2 py-0.5 mb-1 rounded bg-black/10 text-[11px] opacity-85">
+                      <span className="font-semibold block text-[10px] text-[var(--accent-primary)]">
+                        Reply
+                      </span>
+                    </div>
+                  )}
+
                   {/* Text Message */}
                   {type === "messageText" && content.text && (
                     <EntityParser text={content.text.text} entities={content.text.entities} />
@@ -166,17 +264,22 @@ export const ChatArea: React.FC = () => {
 
                   {/* Sticker */}
                   {type === "messageSticker" && (
-                    <div className="p-2 text-2xl">
-                      {content.sticker?.emoji || "🎨"}
-                    </div>
+                    <div className="p-2 text-2xl">{content.sticker?.emoji || "🎨"}</div>
                   )}
 
                   {/* Timestamp & Status Indicator */}
                   <div className="flex items-center justify-end gap-1 self-end text-[10px] opacity-70 font-mono mt-0.5 select-none">
+                    {msg.edit_date && msg.edit_date > 0 && (
+                      <span className="text-[9px] italic mr-1">edited</span>
+                    )}
                     <span>{formatMessageTime(msg.date)}</span>
                     {isOutgoing && (
-                      <span title="Sent">
-                        <CheckCheck size={12} />
+                      <span title={isRead ? "Read" : "Sent"}>
+                        {isRead ? (
+                          <CheckCheck size={12} className="text-sky-300" />
+                        ) : (
+                          <Check size={12} />
+                        )}
                       </span>
                     )}
                   </div>
@@ -187,6 +290,50 @@ export const ChatArea: React.FC = () => {
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Reply / Edit Banner */}
+      {(replyingTo || editingMessage) && (
+        <div className="px-4 py-1.5 bg-[var(--bg-secondary)] border-t border-[var(--border-subtle)] flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 border-l-2 border-[var(--accent-primary)] pl-2 truncate">
+            {replyingTo ? (
+              <>
+                <Reply size={14} className="text-[var(--accent-primary)] shrink-0" />
+                <div className="truncate">
+                  <span className="font-semibold text-[11px] text-[var(--accent-primary)] block">
+                    Replying to message
+                  </span>
+                  <span className="text-[11px] text-[var(--text-muted)] truncate block">
+                    {getMessageSnippet(replyingTo)}
+                  </span>
+                </div>
+              </>
+            ) : editingMessage ? (
+              <>
+                <Edit2 size={14} className="text-[var(--accent-primary)] shrink-0" />
+                <div className="truncate">
+                  <span className="font-semibold text-[11px] text-[var(--accent-primary)] block">
+                    Edit message
+                  </span>
+                  <span className="text-[11px] text-[var(--text-muted)] truncate block">
+                    {getMessageSnippet(editingMessage)}
+                  </span>
+                </div>
+              </>
+            ) : null}
+          </div>
+
+          <button
+            onClick={() => {
+              setReplyingTo(null);
+              setEditingMessage(null);
+              setInputText("");
+            }}
+            className="p-1 rounded-full hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Message Input Composer */}
       <form
@@ -204,10 +351,11 @@ export const ChatArea: React.FC = () => {
 
         <div className="flex-1 bg-[var(--bg-primary)] rounded-[var(--radius-input)] border border-[var(--border-subtle)] focus-within:border-[var(--accent-primary)] transition-colors flex items-center px-3 py-1.5 min-h-[42px]">
           <textarea
+            ref={inputRef}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Write a message..."
+            placeholder={editingMessage ? "Edit message..." : "Write a message..."}
             rows={1}
             className="w-full bg-transparent resize-none outline-none text-xs text-[var(--text-primary)] placeholder-[var(--text-muted)] max-h-32"
           />
@@ -224,9 +372,9 @@ export const ChatArea: React.FC = () => {
           type="submit"
           disabled={!inputText.trim()}
           className="w-10 h-10 rounded-[var(--radius-input)] bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] disabled:opacity-40 text-white flex items-center justify-center transition-colors shrink-0 shadow-sm"
-          title="Send message"
+          title={editingMessage ? "Save edit" : "Send message"}
         >
-          <Send size={16} className="ml-0.5" />
+          {editingMessage ? <Check size={16} /> : <Send size={16} className="ml-0.5" />}
         </button>
       </form>
     </div>

@@ -20,6 +20,8 @@ export interface ChatItem {
     [key: string]: any;
   };
   unread_count: number;
+  last_read_outbox_message_id?: number;
+  last_read_inbox_message_id?: number;
   last_message?: {
     id: number;
     sender_id: any;
@@ -59,7 +61,11 @@ export interface MessageItem {
     document?: any;
     [key: string]: any;
   };
-  reply_to?: any;
+  reply_to?: {
+    "@type": string;
+    message_id?: number;
+    [key: string]: any;
+  };
   edit_date?: number;
   can_be_edited?: boolean;
 }
@@ -76,13 +82,21 @@ interface TelegramStore {
   selectedChatId: number | null;
   messages: Record<number, MessageItem[]>;
 
+  // Interaction State
+  replyingTo: MessageItem | null;
+  editingMessage: MessageItem | null;
+
   // Actions
   setAuthState: (state: AuthState) => void;
   setQrLink: (link: string | null) => void;
   setAuthError: (err: string | null) => void;
   setSelectedChatId: (chatId: number | null) => void;
+  setReplyingTo: (msg: MessageItem | null) => void;
+  setEditingMessage: (msg: MessageItem | null) => void;
   handleUpdate: (update: TdResponse) => void;
   sendMessage: (chatId: number, text: string) => Promise<void>;
+  editMessageText: (chatId: number, messageId: number, text: string) => Promise<void>;
+  deleteMessage: (chatId: number, messageId: number) => Promise<void>;
   loadHistory: (chatId: number) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -98,13 +112,25 @@ export const useTelegramStore = create<TelegramStore>((set, get) => ({
   chatIds: [],
   selectedChatId: null,
   messages: {},
+  replyingTo: null,
+  editingMessage: null,
 
   setAuthState: (authState) => set({ authState }),
   setQrLink: (qrLink) => set({ qrLink }),
   setAuthError: (authError) => set({ authError }),
+  setReplyingTo: (replyingTo) => set({ replyingTo, editingMessage: null }),
+  setEditingMessage: (editingMessage) => set({ editingMessage, replyingTo: null }),
+
   setSelectedChatId: (selectedChatId) => {
-    set({ selectedChatId });
+    const prevChatId = get().selectedChatId;
+    if (prevChatId && prevChatId !== selectedChatId) {
+      telegram.send({ "@type": "closeChat", chat_id: prevChatId }).catch(console.error);
+    }
+
+    set({ selectedChatId, replyingTo: null, editingMessage: null });
+
     if (selectedChatId) {
+      telegram.send({ "@type": "openChat", chat_id: selectedChatId }).catch(console.error);
       get().loadHistory(selectedChatId);
     }
   },
@@ -229,11 +255,69 @@ export const useTelegramStore = create<TelegramStore>((set, get) => ({
         break;
       }
 
+      case "updateChatReadOutbox": {
+        const chatId = update.chat_id;
+        const lastReadMsgId = update.last_read_outbox_message_id;
+        set((prev) => {
+          const chat = prev.chats[chatId];
+          if (!chat) return prev;
+          return {
+            chats: {
+              ...prev.chats,
+              [chatId]: { ...chat, last_read_outbox_message_id: lastReadMsgId },
+            },
+          };
+        });
+        break;
+      }
+
+      case "updateChatReadInbox": {
+        const chatId = update.chat_id;
+        const unreadCount = update.unread_count;
+        const lastReadMsgId = update.last_read_inbox_message_id;
+        set((prev) => {
+          const chat = prev.chats[chatId];
+          if (!chat) return prev;
+          return {
+            chats: {
+              ...prev.chats,
+              [chatId]: {
+                ...chat,
+                unread_count: unreadCount,
+                last_read_inbox_message_id: lastReadMsgId,
+              },
+            },
+          };
+        });
+        break;
+      }
+
+      case "messages": {
+        const extra = update["@extra"];
+        if (extra && typeof extra === "string" && extra.startsWith("history_")) {
+          const chatId = Number(extra.replace("history_", ""));
+          const newMsgs = (update.messages || []) as MessageItem[];
+          // TDLib returns newest to oldest; reverse so oldest is first
+          const reversed = [...newMsgs].reverse();
+          set((prev) => {
+            const existing = prev.messages[chatId] || [];
+            const existingIds = new Set(existing.map((m) => m.id));
+            const merged = [...reversed.filter((m) => !existingIds.has(m.id)), ...existing];
+            return {
+              messages: {
+                ...prev.messages,
+                [chatId]: merged,
+              },
+            };
+          });
+        }
+        break;
+      }
+
       case "updateNewMessage": {
         const msg = update.message as MessageItem;
         set((prev) => {
           const chatMsgs = prev.messages[msg.chat_id] || [];
-          // Avoid duplicates
           if (chatMsgs.some((m) => m.id === msg.id)) {
             return prev;
           }
@@ -244,6 +328,16 @@ export const useTelegramStore = create<TelegramStore>((set, get) => ({
             },
           };
         });
+
+        // If this message belongs to the open chat and is incoming, mark as read
+        if (get().selectedChatId === msg.chat_id && !msg.is_outgoing) {
+          telegram.send({
+            "@type": "viewMessages",
+            chat_id: msg.chat_id,
+            message_ids: [msg.id],
+            force_read: true,
+          }).catch(console.error);
+        }
         break;
       }
 
@@ -263,31 +357,94 @@ export const useTelegramStore = create<TelegramStore>((set, get) => ({
         break;
       }
 
+      case "updateMessageContent": {
+        const chatId = update.chat_id;
+        const msgId = update.message_id;
+        const newContent = update.new_content;
+        set((prev) => {
+          const chatMsgs = prev.messages[chatId] || [];
+          const updated = chatMsgs.map((m) =>
+            m.id === msgId ? { ...m, content: newContent } : m
+          );
+          return {
+            messages: {
+              ...prev.messages,
+              [chatId]: updated,
+            },
+          };
+        });
+        break;
+      }
+
+      case "updateMessageEdited": {
+        const chatId = update.chat_id;
+        const msgId = update.message_id;
+        const editDate = update.edit_date;
+        set((prev) => {
+          const chatMsgs = prev.messages[chatId] || [];
+          const updated = chatMsgs.map((m) =>
+            m.id === msgId ? { ...m, edit_date: editDate } : m
+          );
+          return {
+            messages: {
+              ...prev.messages,
+              [chatId]: updated,
+            },
+          };
+        });
+        break;
+      }
+
+      case "updateDeleteMessages": {
+        const chatId = update.chat_id;
+        const deletedIds = new Set(update.message_ids);
+        set((prev) => {
+          const chatMsgs = prev.messages[chatId] || [];
+          const filtered = chatMsgs.filter((m) => !deletedIds.has(m.id));
+          return {
+            messages: {
+              ...prev.messages,
+              [chatId]: filtered,
+            },
+          };
+        });
+        break;
+      }
+
       default:
         break;
     }
   },
 
   loadHistory: async (chatId: number) => {
-    const existing = get().messages[chatId];
-    if (existing && existing.length > 0) return;
-
     await telegram.send({
       "@type": "getChatHistory",
       chat_id: chatId,
       from_message_id: 0,
       offset: 0,
-      limit: 40,
+      limit: 50,
       only_local: false,
+      "@extra": `history_${chatId}`,
     });
   },
 
   sendMessage: async (chatId: number, text: string) => {
     if (!text.trim()) return;
+    const { replyingTo } = get();
+
+    const replyParam = replyingTo
+      ? {
+          "@type": "inputMessageReplyToMessage",
+          message_id: replyingTo.id,
+        }
+      : undefined;
+
+    set({ replyingTo: null });
 
     await telegram.send({
       "@type": "sendMessage",
       chat_id: chatId,
+      reply_to: replyParam,
       input_message_content: {
         "@type": "inputMessageText",
         text: {
@@ -297,6 +454,34 @@ export const useTelegramStore = create<TelegramStore>((set, get) => ({
         },
         clear_draft: true,
       },
+    });
+  },
+
+  editMessageText: async (chatId: number, messageId: number, text: string) => {
+    if (!text.trim()) return;
+    set({ editingMessage: null });
+
+    await telegram.send({
+      "@type": "editMessageText",
+      chat_id: chatId,
+      message_id: messageId,
+      input_message_content: {
+        "@type": "inputMessageText",
+        text: {
+          "@type": "formattedText",
+          text: text,
+          entities: [],
+        },
+      },
+    });
+  },
+
+  deleteMessage: async (chatId: number, messageId: number) => {
+    await telegram.send({
+      "@type": "deleteMessages",
+      chat_id: chatId,
+      message_ids: [messageId],
+      revoke: true,
     });
   },
 
