@@ -78,6 +78,16 @@ class TelegramService {
     return await invoke<AppPaths>("tdlib_get_paths");
   }
 
+  async getLastAuthState(): Promise<TdResponse | null> {
+    const raw = await invoke<string | null>("tdlib_get_last_auth_state");
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
   // High-level Auth Helpers
   async setParameters(paths: AppPaths, apiId = 2040, apiHash = "b18441a1ff607e10a989891a5462e627") {
     await this.send({

@@ -21,6 +21,11 @@ fn tdlib_get_paths(state: State<'_, Arc<TdlibManager>>) -> Result<AppPaths, Stri
 }
 
 #[tauri::command]
+fn tdlib_get_last_auth_state(state: State<'_, Arc<TdlibManager>>) -> Result<Option<String>, String> {
+    Ok(state.get_last_auth_state())
+}
+
+#[tauri::command]
 fn window_minimize(window: Window) -> Result<(), String> {
     window.minimize().map_err(|e| e.to_string())
 }
@@ -64,6 +69,7 @@ pub fn run() {
             tdlib_send,
             tdlib_execute,
             tdlib_get_paths,
+            tdlib_get_last_auth_state,
             window_minimize,
             window_toggle_maximize,
             window_close

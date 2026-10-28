@@ -72,6 +72,15 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
+  const handleRefreshQr = async () => {
+    setAuthError(null);
+    try {
+      await telegram.requestQrCode();
+    } catch (err: any) {
+      setAuthError(err.message || "Failed to request QR code");
+    }
+  };
+
   return (
     <div
       data-role="auth-screen"
@@ -95,7 +104,7 @@ export const AuthScreen: React.FC = () => {
         )}
 
         {/* Mode: QR Code Authentication */}
-        {(authState === "WaitOtherDeviceConfirmation" || authMode === "qr") &&
+        {authMode === "qr" &&
           authState !== "WaitCode" &&
           authState !== "WaitPassword" && (
             <div className="flex flex-col items-center w-full">
@@ -105,7 +114,14 @@ export const AuthScreen: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-slate-500 text-xs">
                     <RefreshCw className="animate-spin text-sky-500" size={24} />
-                    <span>Generating Telegram QR Code...</span>
+                    <span>Connecting to Telegram...</span>
+                    <button
+                      type="button"
+                      onClick={handleRefreshQr}
+                      className="mt-2 text-[11px] text-sky-600 hover:underline"
+                    >
+                      Click to refresh QR
+                    </button>
                   </div>
                 )}
               </div>
@@ -130,7 +146,8 @@ export const AuthScreen: React.FC = () => {
 
         {/* Mode: Phone Number Input */}
         {authMode === "phone" &&
-          (authState === "WaitPhoneNumber" || authState === "WaitOtherDeviceConfirmation") && (
+          authState !== "WaitCode" &&
+          authState !== "WaitPassword" && (
             <form onSubmit={handlePhoneSubmit} className="w-full flex flex-col gap-4">
               <div className="text-left">
                 <label className="text-xs font-medium text-[var(--text-secondary)] mb-1.5 block">

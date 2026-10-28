@@ -116,14 +116,16 @@ export const useTelegramStore = create<TelegramStore>((set, get) => ({
       case "updateAuthorizationState": {
         const authStateObj = update.authorization_state;
         const subType = authStateObj["@type"];
+        console.log("[TDLib Client] Auth State:", subType, authStateObj);
 
         if (subType === "authorizationStateWaitTdlibParameters") {
           set({ authState: "WaitTdlibParameters" });
           const paths = await telegram.getAppPaths();
           await telegram.setParameters(paths);
+        } else if (subType === "authorizationStateWaitEncryptionKey") {
+          telegram.send({ "@type": "checkDatabaseEncryptionKey", encryption_key: "" }).catch(console.error);
         } else if (subType === "authorizationStateWaitPhoneNumber") {
           set({ authState: "WaitPhoneNumber", authError: null });
-          // Also immediately request QR code for instant scan
           telegram.requestQrCode().catch(console.error);
         } else if (subType === "authorizationStateWaitOtherDeviceConfirmation") {
           set({

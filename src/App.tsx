@@ -18,6 +18,14 @@ export const App: React.FC = () => {
         unlisten = telegram.onUpdate((update) => {
           handleUpdate(update);
         });
+
+        // Query initial auth state in case Rust already received it before Webview loaded
+        const lastAuth = await telegram.getLastAuthState();
+        if (lastAuth) {
+          handleUpdate(lastAuth);
+        } else {
+          await telegram.send({ "@type": "getAuthorizationState" });
+        }
       } catch (err) {
         console.error("Failed to initialize Telegram service:", err);
       }
