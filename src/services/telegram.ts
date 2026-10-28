@@ -110,7 +110,10 @@ class TelegramService {
   }
 
   async requestQrCode() {
-    await this.send({ "@type": "requestQrCode" });
+    await this.send({
+      "@type": "requestQrCodeAuthentication",
+      other_user_ids: [],
+    });
   }
 
   async setAuthenticationPhoneNumber(phoneNumber: string) {
