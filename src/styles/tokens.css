@@ -1,0 +1,130 @@
+:root,
+[data-theme="dark"] {
+  /* Surfaces & Backgrounds */
+  --bg-primary: #0f141c;
+  --bg-secondary: #171f2c;
+  --bg-sidebar: #131a24;
+  --bg-card: #1c2536;
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 255, 255, 0.1);
+
+  /* Typography */
+  --text-primary: #f0f4f8;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  /* Accent & Brands */
+  --accent-primary: #38bdf8;
+  --accent-hover: #0284c7;
+  --accent-light: rgba(56, 189, 248, 0.15);
+
+  /* Message Bubbles */
+  --bubble-in-bg: #1e293b;
+  --bubble-in-text: #f8fafc;
+  --bubble-out-bg: #0369a1;
+  --bubble-out-text: #ffffff;
+
+  /* Radii */
+  --radius-bubble: 16px;
+  --radius-card: 12px;
+  --radius-input: 10px;
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-divider: rgba(255, 255, 255, 0.05);
+
+  /* Status & Indicators */
+  --status-online: #22c55e;
+  --status-unread-badge: #38bdf8;
+  --status-unread-text: #0f172a;
+
+  /* Titlebar */
+  --titlebar-bg: #0b0f15;
+  --titlebar-text: #94a3b8;
+  --titlebar-btn-hover: rgba(255, 255, 255, 0.1);
+  --titlebar-btn-close-hover: #ef4444;
+}
+
+[data-theme="light"] {
+  /* Surfaces & Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-sidebar: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+  --bg-active: rgba(0, 0, 0, 0.08);
+
+  /* Typography */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+
+  /* Accent & Brands */
+  --accent-primary: #0284c7;
+  --accent-hover: #0369a1;
+  --accent-light: rgba(2, 132, 199, 0.12);
+
+  /* Message Bubbles */
+  --bubble-in-bg: #f1f5f9;
+  --bubble-in-text: #0f172a;
+  --bubble-out-bg: #38bdf8;
+  --bubble-out-text: #0f172a;
+
+  /* Radii */
+  --radius-bubble: 16px;
+  --radius-card: 12px;
+  --radius-input: 10px;
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-divider: rgba(0, 0, 0, 0.05);
+
+  /* Status & Indicators */
+  --status-online: #16a34a;
+  --status-unread-badge: #0284c7;
+  --status-unread-text: #ffffff;
+
+  /* Titlebar */
+  --titlebar-bg: #e2e8f0;
+  --titlebar-text: #475569;
+  --titlebar-btn-hover: rgba(0, 0, 0, 0.08);
+  --titlebar-btn-close-hover: #ef4444;
+}
+
+[data-theme="oled"] {
+  --bg-primary: #000000;
+  --bg-secondary: #080808;
+  --bg-sidebar: #050505;
+  --bg-card: #111111;
+  --bg-hover: rgba(255, 255, 255, 0.08);
+  --bg-active: rgba(255, 255, 255, 0.14);
+
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
+
+  --accent-primary: #0ea5e9;
+  --accent-hover: #38bdf8;
+  --accent-light: rgba(14, 165, 233, 0.2);
+
+  --bubble-in-bg: #171717;
+  --bubble-in-text: #ffffff;
+  --bubble-out-bg: #0369a1;
+  --bubble-out-text: #ffffff;
+
+  --radius-bubble: 16px;
+  --radius-card: 12px;
+  --radius-input: 10px;
+
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-divider: rgba(255, 255, 255, 0.08);
+
+  --status-online: #22c55e;
+  --status-unread-badge: #0ea5e9;
+  --status-unread-text: #ffffff;
+
+  --titlebar-bg: #000000;
+  --titlebar-text: #a3a3a3;
+  --titlebar-btn-hover: rgba(255, 255, 255, 0.12);
+  --titlebar-btn-close-hover: #ef4444;
+}

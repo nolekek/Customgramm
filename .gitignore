@@ -12,6 +12,7 @@ dist/
 src-tauri/target/
 
 # OS / IDE
+.antigravity/
 .DS_Store
 Thumbs.db
 .vscode/
@@ -20,6 +21,7 @@ Thumbs.db
 
 # App data & credentials
 .data/
+/bin/
 *.session
 *.session-journal
 tdlib/
